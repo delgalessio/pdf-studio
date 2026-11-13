@@ -226,6 +226,7 @@ button{font:inherit;color:inherit}
 .seg button.on{color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 14px var(--acc-glow)}
 .seg button:active{transform:scale(.93)}
 .seg button:focus-visible{outline:none;box-shadow:0 0 0 3px var(--acc-glow)}
+.flab{flex:1 0 100%;font-size:13px;color:var(--mute);margin-top:4px}
 .segs{display:flex;gap:10px}.segs .seg{flex:1}
 .notrans *,.notrans *::before,.notrans *::after{transition:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
@@ -559,8 +560,8 @@ window.addEventListener("pagehide", releaseDocument);
 
 /* ===== Fase 2a: selezione, forme, testo, annulla/ripristina ===== */
 Object.assign(S, { tool: "select", sel: null, editing: null, rng: null, editNew: false, editPre: "", hist: [], fut: [], drag: null,
-  defs: { shape: { kind: "rect", fill: "#0f9fc7", noFill: false, stroke: "#2457c5", noStroke: false, sw: 2, lock: false, r: 0 },
-          text: { html: "", font: "Arial", size: 14, bold: false, italic: false, strike: false, color: "#000000", bg: "#ffffff", noBg: true, align: "left", valign: "top" } } });
+  defs: { shape: { kind: "rect", fill: "#0f9fc7", fo: 100, stroke: "#2457c5", noStroke: false, sw: 2, lock: false, r: 0 },
+          text: { html: "", font: "Arial", size: 14, bold: false, italic: false, strike: false, underline: false, color: "#000000", bg: "#ffffff", bgo: 0, align: "left", valign: "top" } } });
 const NS = "http://www.w3.org/2000/svg";
 const HND = [[0,0],[.5,0],[1,0],[0,.5],[1,.5],[0,1],[.5,1],[1,1]];
 const CUR = ["nwse","ns","nesw","ew","ew","nesw","ns","nwse"];
@@ -602,12 +603,12 @@ function drawElements() {
 function buildNode(e) {   // costruisce il disegno SVG di un elemento
   const p = e.props; let n;
     if (e.type === "shape") {
-      const a = { fill: p.noFill ? "none" : p.fill, stroke: p.noStroke ? "none" : p.stroke, "stroke-width": p.sw, style: "pointer-events:all" };
+      const a = { fill: (p.fo ?? 100) > 0 ? p.fill : "none", "fill-opacity": (p.fo ?? 100) / 100, stroke: p.noStroke ? "none" : p.stroke, "stroke-width": p.sw, style: "pointer-events:all" };
       n = p.kind === "ellipse" ? mk("ellipse", { cx: e.x + e.w / 2, cy: e.y + e.h / 2, rx: e.w / 2, ry: e.h / 2, ...a })
                                : mk("rect", { x: e.x, y: e.y, width: e.w, height: e.h, rx: Math.min(p.r || 0, e.w / 2, e.h / 2), ry: Math.min(p.r || 0, e.w / 2, e.h / 2), ...a });
     } else if (e.type === "field" || e.type === "check") {
       n = mk("g", {});
-      n.appendChild(mk("rect", { x: e.x, y: e.y, width: e.w, height: e.h, fill: p.noBg ? "rgba(79,140,255,.08)" : p.bg, stroke: p.noBorder ? "none" : p.bc, "stroke-width": p.noBorder ? 0 : p.bw, style: "pointer-events:all" }));
+      n.appendChild(mk("rect", { x: e.x, y: e.y, width: e.w, height: e.h, fill: (p.bgo ?? 100) > 0 ? p.bg : "rgba(79,140,255,.08)", "fill-opacity": (p.bgo ?? 100) > 0 ? (p.bgo ?? 100) / 100 : 1, stroke: p.noBorder ? "none" : p.bc, "stroke-width": p.noBorder ? 0 : p.bw, style: "pointer-events:all" }));
       if (e.type === "field") {
         const fo = mk("foreignObject", { x: e.x, y: e.y, width: e.w, height: e.h }), o2 = document.createElement("div"), t2 = document.createElement("div");
         o2.className = "tb"; t2.className = "tt"; styleTb(o2, t2, viewProps(e));
@@ -691,7 +692,7 @@ ov.addEventListener("pointerdown", ev => {
   ov.setPointerCapture(ev.pointerId); ev.preventDefault();
 });
 ov.addEventListener("pointermove", ev => {
-  const d = S.drag; if (!d) { if (S.tool === "draw" && S.defs.draw.mode === "eraser" && S.pdf) eraserCursor(pt(ev)); return; } const p = pt(ev);
+  const d = S.drag; if (!d) { if (S.tool === "draw" && S.pdf) { if (S.defs.draw.mode === "eraser") eraserCursor(pt(ev)); else $("layerSel").replaceChildren(tipNode(pt(ev))); } return; } const p = pt(ev);
   if (d.m === "erase") {
     const r = S.defs.draw.eraser.sw / 2, L = Math.hypot(p.x - d.last.x, p.y - d.last.y), n = Math.max(1, Math.ceil(L / Math.max(1, r / 2)));
     for (let i = 1; i <= n; i++) eraseAt({ x: d.last.x + (p.x - d.last.x) * i / n, y: d.last.y + (p.y - d.last.y) * i / n }, r);
@@ -701,7 +702,7 @@ ov.addEventListener("pointermove", ev => {
     const l = d.pts[d.pts.length - 1];
     if (Math.hypot(p.x - l[0], p.y - l[1]) >= 0.6) {
       d.pts.push([p.x, p.y]);
-      $("layerSel").replaceChildren(strokePreview(d.pts));
+      $("layerSel").replaceChildren(strokePreview(d.pts), tipNode(p));
     }
     return;
   }
@@ -788,7 +789,8 @@ const sv = d => '<svg viewBox="0 0 24 24">' + d + '</svg>';
 const AIC = {
   al: sv('<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>'), ac: sv('<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>'), ar: sv('<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>'),
   vt: sv('<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7.5h8M8 11h5"/>'), vm: sv('<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 10.5h8M8 14h5"/>'), vb: sv('<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 13.5h8M8 17h5"/>'),
-  round: sv('<path d="M7 17 17 7" style="stroke-width:6.5;stroke-linecap:round"/>'), square: sv('<path d="M8 16 16 8" style="stroke-width:6.5;stroke-linecap:square"/>'),
+  round: sv('<circle cx="12" cy="12" r="7" style="fill:currentColor;stroke:none"/>'), square: sv('<rect x="5" y="5" width="14" height="14" rx="1.6" style="fill:currentColor;stroke:none"/>'),
+  pencil: sv('<path d="m4 20 4-1 11-11-3-3L5 16z"/><path d="m14 7 3 3"/>'), hl: sv('<path d="m15.5 3.5 5 5-9 9-5-5z"/><path d="m6.5 12.5-2.5 6.5 6.5-2.5"/><path d="M13.5 20.5h7"/>'), er: sv('<path d="m7 21-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l5 5a2 2 0 0 1 0 2.8L12 21"/><path d="M7 21h13"/><path d="m9 10 7 7"/>'),
   rect: sv('<rect x="3.5" y="6.5" width="17" height="11" rx="1.5"/>'), ell: sv('<ellipse cx="12" cy="12" rx="8.5" ry="6"/>')
 };
 function rangeCtl(obj, key, opts) {   // cursore con valore intero; opts: [minimo, massimo, , unità]
@@ -860,11 +862,11 @@ function renderProps() {
     box.append(h, p); return;
   }
   const o = e ? e.props : S.defs[type];
-  h.textContent = (e ? "" : "Nuovo: ") + ({ shape: "Forma", text: "Casella di testo", draw: "Mano libera", image: "Immagine", field: "Campo di testo compilabile", check: "Casella di spunta" })[type];
+  h.textContent = ({ shape: "Forma", text: "Casella di testo", draw: "Mano libera", image: "Immagine", field: "Campo di testo compilabile", check: "Casella di spunta" })[type];
   const f = document.createElement("div"); f.className = "form"; let fm = null;
   if (type === "shape") f.append(row("Tipo", ctl(o, "kind", "seg", [["rect", "Rettangolo", AIC.rect], ["ellipse", "Ellisse", AIC.ell]])),
     ...(e ? [row("Base (pt)", ctl(e, "w", "number", [1, 5000, 0])), row("Altezza (pt)", ctl(e, "h", "number", [1, 5000, 0]))] : []),
-    row("Riempimento", ctl(o, "fill", "color")), row("Senza riempimento", ctl(o, "noFill", "checkbox")),
+    row("Riempimento", ctl(o, "fill", "color")), row("Opacità riempimento", ctl(o, "fo", "range", [0, 100, 0, "%"])),
     row("Contorno", ctl(o, "stroke", "color")), row("Senza contorno", ctl(o, "noStroke", "checkbox")), row("Spessore", ctl(o, "sw", "range", [1, 40, 0, "pt"])), row("Mantieni proporzioni (Maiusc)", ctl(o, "lock", "checkbox")), row("Raggio angoli (rettangolo)", ctl(o, "r", "number", [0, 500, 0])), ...(e ? [row("Rotazione (°)", ctl(e, "rot", "number", [0, 359, 0]))] : []));
   else if (type === "draw") {
     const dd = e ? e.props : S.defs.draw[S.defs.draw.mode];
@@ -874,7 +876,7 @@ function renderProps() {
   }
   else if (type === "field" || type === "check") fieldProps(f, o, e, type);
   else if (type === "image") f.append(row("Mantieni proporzioni", ctl(o, "lock", "checkbox")), row("Base (pt)", ctl(e, "w", "number", [1, 5000, 0])), row("Altezza (pt)", ctl(e, "h", "number", [1, 5000, 0])), row("Rotazione (°)", ctl(e, "rot", "number", [0, 359, 0])));
-  else { fm = buildFmt(o); f.append(row("Sfondo", ctl(o, "bg", "color")), row("Sfondo trasparente", ctl(o, "noBg", "checkbox")),
+  else { fm = buildFmt(o); f.append(row("Sfondo", ctl(o, "bg", "color")), row("Opacità sfondo", ctl(o, "bgo", "range", [0, 100, 0, "%"])),
     row("Allineamento", alignSegs(o, false))); }
   if (e) {
     const same = S.elements.filter(x => x.page === e.page), pos = same.indexOf(e), last = same.length - 1;
@@ -912,7 +914,11 @@ document.querySelectorAll(".tool[data-tool]").forEach(b => b.onclick = () => set
 $("btnUndo").onclick = undo; $("btnRedo").onclick = redo;
 document.addEventListener("keydown", e => {
   if (S.editing) { if (e.key === "Escape") endEdit(); return; }   // mentre si scrive, Canc e Backspace valgono solo per il testo
-  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName || "")) return;
+  const tg = e.target, tag = tg.tagName || "";
+  if (/INPUT|TEXTAREA|SELECT/.test(tag)) {   // nei campi di scrittura le scorciatoie non si toccano; con cursori e caselle valgono comunque annulla e ripristina
+    const typing = tag !== "INPUT" || !/^(range|checkbox|radio|color|button)$/.test(tg.type), z = (e.ctrlKey || e.metaKey) && /^[zy]$/i.test(e.key);
+    if (typing || !z) return;
+  }
   const k = e.key.toLowerCase(), c = e.ctrlKey || e.metaKey;
   if (c && k === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   else if (c && k === "y") { e.preventDefault(); redo(); }
@@ -923,17 +929,18 @@ document.addEventListener("keydown", e => {
 });
 
 /* Testo modificabile direttamente nella casella, con formati per singole parole */
+function rgbaOf(hex, pct) { const n = parseInt(hex.slice(1), 16); return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + (pct / 100) + ")"; }
 function styleTb(o, t, p) {
   o.style.cssText = "width:100%;height:100%;box-sizing:border-box;padding:4px;overflow:hidden;display:flex;flex-direction:column;justify-content:" +
-    ({ top: "flex-start", middle: "center", bottom: "flex-end" })[p.valign] + ";background:" + (p.noBg ? "transparent" : p.bg);
+    ({ top: "flex-start", middle: "center", bottom: "flex-end" })[p.valign] + ";background:" + rgbaOf(p.bg, p.bgo ?? 0);
   t.style.cssText = "width:100%;outline:none;white-space:" + (p.nowrap ? "pre" : "pre-wrap") + ";overflow-wrap:anywhere;color:" + p.color + ";text-align:" + p.align +
-    ";text-decoration:" + (p.strike ? "line-through" : "none") + ";font:" + (p.italic ? "italic " : "") + (p.bold ? "bold " : "") + p.size + "px/1.2 '" + p.font + "',sans-serif";
+    ";text-decoration:" + ((p.strike || p.underline) ? (p.strike ? "line-through " : "") + (p.underline ? "underline" : "") : "none") + ";font:" + (p.italic ? "italic " : "") + (p.bold ? "bold " : "") + p.size + "px/1.2 '" + p.font + "',sans-serif";
 }
 const edDiv = () => S.editing ? document.querySelector('#layerEls [data-id="' + S.editing + '"] .tt') : null;
 const SAMPLE = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ".repeat(20);
 function viewProps(e) {   // proprietà di aspetto usate per mostrare il testo nella casella o nel campo
   const p = e.props; if (e.type !== "field") return p;
-  return { font: "Arial", size: p.size || Math.min(14, Math.max(6, e.h - 6)), bold: false, italic: false, strike: false, color: p.color, align: p.align, valign: p.valign, nowrap: p.valign !== "top", bg: "#fff", noBg: true };
+  return { font: "Arial", size: p.size || Math.min(14, Math.max(6, e.h - 6)), bold: false, italic: false, strike: false, underline: false, color: p.color, align: p.align, valign: p.valign, nowrap: p.valign !== "top", bg: "#fff", bgo: 0 };
 }
 function redraw() {
   const t = edDiv();
@@ -983,12 +990,12 @@ function applyFmt(kind, val) {
   if (S.editing) {
     const ed = edDiv(); ed.focus(); const sl = getSelection(); if (S.rng) { sl.removeAllRanges(); sl.addRange(S.rng); }
     document.execCommand("styleWithCSS", false, true);
-    const cmd = { bold: "bold", italic: "italic", strike: "strikeThrough", color: "foreColor", font: "fontName", size: "fontSize" }[kind];
+    const cmd = { bold: "bold", italic: "italic", strike: "strikeThrough", underline: "underline", color: "foreColor", font: "fontName", size: "fontSize" }[kind];
     document.execCommand(cmd, false, kind === "size" ? "7" : val);
     if (kind === "size") ed.querySelectorAll("span").forEach(x => { if (x.style.fontSize === "xxx-large") x.style.fontSize = val + "px"; });
   } else {
     const pre = snap(), q = e.props;
-    if (kind === "bold" || kind === "italic" || kind === "strike") q[kind] = !q[kind]; else q[kind] = val;
+    if (kind === "bold" || kind === "italic" || kind === "strike" || kind === "underline") q[kind] = !q[kind]; else q[kind] = val;
     commit(pre); drawElements();
   }
 }
@@ -1000,8 +1007,8 @@ function buildFmt(o) {
   const sz = document.createElement("input"); sz.type = "number"; sz.min = 4; sz.max = 200; sz.value = o.size; sz.title = "Dimensione";
   sz.onchange = () => applyFmt("size", Math.min(200, Math.max(4, Math.round(parseFloat(sz.value)) || 14)));
   const btn = (l, t, k) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn icon-btn"; b.innerHTML = l; b.title = t; b.onmousedown = ev => ev.preventDefault(); b.onclick = () => applyFmt(k); return b; };
-  let cur = o.color; const col = palette(() => cur, (c, final) => { if (final) { cur = c; applyFmt("color", c); } }); col.style.flex = "1 0 100%";
-  d.append(sel, sz, btn("<b>B</b>", "Grassetto", "bold"), btn("<i>I</i>", "Corsivo", "italic"), btn("<s>S</s>", "Barrato", "strike"), col);
+  let cur = o.color; const col = palette(() => cur, (c, final) => { if (final) { cur = c; applyFmt("color", c); } }); col.style.flex = "1 0 100%"; const lab = document.createElement("span"); lab.className = "flab"; lab.textContent = "Colore del testo";
+  d.append(sel, sz, btn("<b>B</b>", "Grassetto", "bold"), btn("<i>I</i>", "Corsivo", "italic"), btn("<s>S</s>", "Barrato", "strike"), btn("<u>U</u>", "Sottolineato", "underline"), lab, col);
   return d;
 }
 
@@ -1067,10 +1074,16 @@ function strokePreview(pts) {
   const c = drawCfg();
   return mk("polyline", { points: pts.map(q => q.join(",")).join(" "), fill: "none", stroke: c.color, "stroke-opacity": c.op / 100, "stroke-width": c.sw, "stroke-linecap": c.cap, "stroke-linejoin": c.cap === "square" ? "miter" : "round", "pointer-events": "none" });
 }
+function tipNode(c0) {   // sagoma della punta, con lo spessore reale del tratto
+  const c = drawCfg(), r = c.sw / 2, g = mk("g", { "pointer-events": "none" });
+  const geo = a => c.cap === "square" ? mk("rect", { x: c0.x - r, y: c0.y - r, width: c.sw, height: c.sw, ...a }) : mk("circle", { cx: c0.x, cy: c0.y, r, ...a });
+  g.append(geo({ fill: c.color, "fill-opacity": Math.max(.3, c.op / 100), stroke: "rgba(0,0,0,.55)", "stroke-width": 1.4 / S.zoom }), geo({ fill: "none", stroke: "#fff", "stroke-width": .7 / S.zoom }));
+  return g;
+}
 function eraserCursor(p) {
   $("layerSel").replaceChildren(mk("circle", { cx: p.x, cy: p.y, r: S.defs.draw.eraser.sw / 2, fill: "rgba(255,255,255,.35)", stroke: "#5b5bf0", "stroke-width": 1 / S.zoom, "pointer-events": "none" }));
 }
-ov.addEventListener("pointerleave", () => { if (!S.drag && S.tool === "draw" && S.defs.draw.mode === "eraser") $("layerSel").replaceChildren(); });
+ov.addEventListener("pointerleave", () => { if (!S.drag && S.tool === "draw") $("layerSel").replaceChildren(); });
 function splitStroke(pts, cx, cy, r) {   // taglia il tratto dove passa il cerchio della gomma; null se non lo tocca
   const pieces = []; let cur = [pts[0]], hit = false;
   if (Math.hypot(pts[0][0] - cx, pts[0][1] - cy) < r) { cur = []; hit = true; }
@@ -1106,11 +1119,11 @@ function eraseAt(c, r) {
   }
   if (changed) { S.elements = out; if (!find(S.sel)) S.sel = null; }
 }
-function modeRow() {
-  const d = document.createElement("div"); d.className = "modes";
-  [["pencil", "Matita"], ["highlighter", "Evidenziatore"], ["eraser", "Gomma"]].forEach(([m, t]) => {
-    const b = document.createElement("button"); b.type = "button"; b.className = "btn" + (S.defs.draw.mode === m ? " primary" : ""); b.textContent = t;
-    b.setAttribute("aria-pressed", S.defs.draw.mode === m); b.onclick = () => { S.defs.draw.mode = m; drawElements(); renderProps(); updateUI(); }; d.appendChild(b);
+function modeRow() {   // matita, evidenziatore e gomma, con un'immagine al posto del testo
+  const d = document.createElement("div"); d.className = "seg";
+  [["pencil", "Matita", AIC.pencil], ["highlighter", "Evidenziatore", AIC.hl], ["eraser", "Gomma", AIC.er]].forEach(([m, t, ic]) => {
+    const b = document.createElement("button"), on = S.defs.draw.mode === m; b.type = "button"; b.title = t; b.setAttribute("aria-label", t); b.innerHTML = ic; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+    b.onclick = () => { S.defs.draw.mode = m; drawElements(); renderProps(); updateUI(); }; d.appendChild(b);
   });
   return d;
 }
@@ -1168,11 +1181,12 @@ function textRuns(e) {   // legge il testo formattato così come lo vede il brow
   box.style.cssText = "position:fixed;left:-99999px;top:0;visibility:hidden;width:" + e.w + "px";
   styleTb(o, t, p); t.innerHTML = p.html; o.appendChild(t); box.appendChild(o); document.body.appendChild(box);
   const cs = n => getComputedStyle(n);
+  const under = n => { for (let x = n; x && x !== box; x = x.parentElement) if (/underline/.test(cs(x).textDecorationLine)) return true; return false; };
   const strike = n => { for (let x = n; x && x !== box; x = x.parentElement) if (/line-through/.test(cs(x).textDecorationLine)) return true; return false; };
   const walk = n => {
     if (n.nodeType === 3) {
       if (!n.nodeValue) return; const c = cs(n.parentElement);
-      runs.push({ t: n.nodeValue.replace(/\u00a0/g, " "), b: parseInt(c.fontWeight) >= 600 || c.fontWeight === "bold", i: c.fontStyle === "italic", s: strike(n.parentElement), col: c.color, fam: c.fontFamily, size: parseFloat(c.fontSize) });
+      runs.push({ t: n.nodeValue.replace(/\u00a0/g, " "), b: parseInt(c.fontWeight) >= 600 || c.fontWeight === "bold", i: c.fontStyle === "italic", s: strike(n.parentElement), u: under(n.parentElement), col: c.color, fam: c.fontFamily, size: parseFloat(c.fontSize) });
     } else if (n.nodeName === "BR") runs.push({ br: true, size: parseFloat(cs(n.parentElement).fontSize) });
     else {
       if (/^(DIV|P)$/.test(n.nodeName) && runs.length && !runs[runs.length - 1].br) runs.push({ br: true, size: parseFloat(cs(n).fontSize) });
@@ -1183,7 +1197,7 @@ function textRuns(e) {   // legge il testo formattato così come lo vede il brow
 }
 async function drawText(L, page, doc, e, getFont) {
   const p = e.props, w = e.w, h = e.h, pad = 4, maxW = w - 2 * pad, runs = textRuns(e);
-  if (!p.noBg) page.drawRectangle({ x: -w / 2, y: -h / 2, width: w, height: h, color: hexRgb(p.bg) });
+  if ((p.bgo ?? 0) > 0) page.drawRectangle({ x: -w / 2, y: -h / 2, width: w, height: h, color: hexRgb(p.bg), opacity: p.bgo / 100 });
   for (const r of runs) if (!r.br) r.f = await getFont(r.fam, r.b, r.i);
   const safe = (f, str) => [...str.replace(/\t/g, "    ")].map(ch => { try { f.widthOfTextAtSize(ch, 10); return ch; } catch (x) { return "?"; } }).join("");
   const atoms = [];
@@ -1221,11 +1235,12 @@ async function drawText(L, page, doc, e, getFont) {
         if (!grp) return;
         const col = cssRgb(grp.r.col);
         page.drawText(grp.t, { x: grp.x, y: base, size: grp.r.size, font: grp.r.f, color: col });
+        if (grp.r.u || p.underline) page.drawLine({ start: { x: grp.x, y: base - grp.r.size * 0.13 }, end: { x: grp.x + grp.w, y: base - grp.r.size * 0.13 }, thickness: Math.max(0.5, grp.r.size * 0.06), color: col });
         if (grp.r.s || p.strike) page.drawLine({ start: { x: grp.x, y: base + grp.r.size * 0.3 }, end: { x: grp.x + grp.w, y: base + grp.r.size * 0.3 }, thickness: Math.max(0.5, grp.r.size * 0.07), color: col });
         grp = null;
       };
       for (const a of l.a) {
-        if (grp && grp.r !== a.r && (grp.r.f !== a.r.f || grp.r.size !== a.r.size || grp.r.col !== a.r.col || grp.r.s !== a.r.s)) flush();
+        if (grp && grp.r !== a.r && (grp.r.f !== a.r.f || grp.r.size !== a.r.size || grp.r.col !== a.r.col || grp.r.s !== a.r.s || grp.r.u !== a.r.u)) flush();
         if (!grp) grp = { t: "", x, w: 0, r: a.r };
         grp.t += a.t; grp.w += a.w; x += a.w;
       }
@@ -1241,8 +1256,8 @@ async function drawElement(L, doc, page, e, getFont, imgs) {
   page.pushOperators(L.pushGraphicsState(), L.concatTransformationMatrix(ex[0] - o[0], ex[1] - o[1], ey[0] - o[0], ey[1] - o[1], o[0], o[1]));
   try {
     if (e.type === "shape") {
-      const fill = p.noFill ? null : hexRgb(p.fill), line = p.noStroke ? null : hexRgb(p.stroke); if (!fill && !line) return;
-      const st = {}; if (fill) st.color = fill; if (line) { st.borderColor = line; st.borderWidth = p.sw; }
+      const fo = p.fo ?? 100, fill = fo > 0 ? hexRgb(p.fill) : null, line = p.noStroke ? null : hexRgb(p.stroke); if (!fill && !line) return;
+      const st = {}; if (fill) { st.color = fill; st.opacity = fo / 100; } if (line) { st.borderColor = line; st.borderWidth = p.sw; }
       const r = Math.min(p.r || 0, w / 2, h / 2);
       if (p.kind === "ellipse") page.drawEllipse({ x: 0, y: 0, xScale: w / 2, yScale: h / 2, ...st });
       else if (r <= 0) page.drawRectangle({ x: -w / 2, y: -h / 2, width: w, height: h, ...st });
@@ -1258,8 +1273,8 @@ async function drawElement(L, doc, page, e, getFont, imgs) {
   } finally { page.pushOperators(L.popGraphicsState()); }
 }
 /* ===== Fase 3: campi compilabili (veri campi AcroForm) ===== */
-S.defs.field = { name: "", test: "", demo: false, size: 12, color: "#000000", align: "left", valign: "top", max: 0, req: false, bg: "#eaf2ff", noBg: false, bc: "#6b7280", noBorder: false, bw: 1 };
-S.defs.check = { name: "", label: "", checked: false, req: false, lock: true, bg: "#ffffff", noBg: false, bc: "#6b7280", noBorder: false, bw: 1 };
+S.defs.field = { name: "", test: "", demo: false, size: 12, color: "#000000", align: "left", valign: "top", max: 0, req: false, bg: "#eaf2ff", bgo: 100, bc: "#6b7280", noBorder: false, bw: 1 };
+S.defs.check = { name: "", label: "", checked: false, req: false, lock: true, bg: "#ffffff", bgo: 100, bc: "#6b7280", noBorder: false, bw: 1 };
 const usedNames = ex => new Set(S.elements.filter(x => x.props && x.props !== ex && x.props.name !== undefined).map(x => x.props.name));
 function autoName(prefix) { const u = usedNames(null); let n = 1; while (u.has(prefix + "_" + n)) n++; return prefix + "_" + n; }
 function uniqueName(raw, props) {   // nome non vuoto, senza punti o spazi e diverso da quelli già usati
@@ -1269,7 +1284,7 @@ function uniqueName(raw, props) {   // nome non vuoto, senza punti o spazi e div
 function fieldProps(f, o, e, type) {
   const sz1 = e ? [row("Dimensione (pt, quadrata)", ctl(e, "w", "number", [4, 500, 0]))] : [];
   const sz = e ? [row("Base (pt)", ctl(e, "w", "number", [4, 5000, 0])), row("Altezza (pt)", ctl(e, "h", "number", [4, 5000, 0]))] : [];
-  const look = [row("Sfondo", ctl(o, "bg", "color")), row("Sfondo trasparente", ctl(o, "noBg", "checkbox")), row("Colore bordo", ctl(o, "bc", "color")),
+  const look = [row("Sfondo", ctl(o, "bg", "color")), row("Opacità sfondo", ctl(o, "bgo", "range", [0, 100, 0, "%"])), row("Colore bordo", ctl(o, "bc", "color")),
     row("Senza bordo", ctl(o, "noBorder", "checkbox")), row("Spessore bordo", ctl(o, "bw", "range", [1, 10, 0, "pt"]))];
   if (type === "field") f.append(...(e ? [row("Nome del campo", ctl(o, "name", "text")), row("Compilazione di prova (non salvata)", ctl(o, "demo", "checkbox"))] : []), ...sz,
     row("Dimensione testo (0 = auto)", ctl(o, "size", "number", [0, 72, 0])), row("Colore testo", ctl(o, "color", "color")),
@@ -1289,7 +1304,8 @@ async function addField(L, doc, page, e, taken, getFont, imgs) {
   // il PDF non prevede l'allineamento verticale: per i campi a riga singola con testo fisso, sfondo e bordo diventano un rettangolo statico e il campo vero occupa solo la fascia in alto o in basso
   const emu = e.type === "field" && p.size > 0 && p.valign === "bottom";
   const lh = emu ? Math.min(e.h, Math.ceil(p.size * 1.2 + 2 * Math.max(p.bw, 1) + 2)) : e.h, gy = emu && p.valign === "bottom" ? e.y + e.h - lh : e.y;
-  if (emu) await drawElement(L, doc, page, { type: "shape", x: e.x, y: e.y, w: e.w, h: e.h, rot: 0, props: { kind: "rect", fill: p.bg, noFill: p.noBg, stroke: p.bc, noStroke: p.noBorder, sw: p.bw, r: 0 } }, getFont, imgs);
+  const bgo = p.bgo ?? 100, partial = bgo > 0 && bgo < 100;   // lo sfondo parzialmente trasparente è un rettangolo fisso: nei moduli PDF lo sfondo del campo non ha opacità
+  if (emu || partial) await drawElement(L, doc, page, { type: "shape", x: e.x, y: e.y, w: e.w, h: e.h, rot: rr, props: { kind: "rect", fill: p.bg, fo: bgo, stroke: p.bc, noStroke: !emu || p.noBorder, sw: p.bw, r: 0 } }, getFont, imgs);
   const c = [[e.x, gy], [e.x + e.w, gy], [e.x, gy + lh], [e.x + e.w, gy + lh]].map(([a, b]) => P(...rp(a, b))), xs = c.map(q => q[0]), ys = c.map(q => q[1]);
   const x = Math.min(...xs), y = Math.min(...ys), RW = Math.max(...xs) - x, RH = Math.max(...ys) - y, bw = (p.noBorder || emu) ? 0 : p.bw, bh = bw / 2;
   // pdf-lib interpreta x, y, base e altezza nel riferimento già ruotato: qui si inverte la sua formula per ottenere esattamente il rettangolo voluto sulla pagina
@@ -1297,7 +1313,7 @@ async function addField(L, doc, page, e, taken, getFont, imgs) {
   const opt = { x: g[2], y: g[3], width: g[0] - bw, height: g[1] - bw, rotate: L.degrees(R), borderWidth: bw };
   let name = p.name || (e.type === "field" ? "Campo" : "Casella"), n = name, i = 2; while (taken.has(n)) n = name + "_" + i++; taken.add(n);
   // le chiavi vanno sempre indicate: se omesse, pdf-lib disegna di suo uno sfondo bianco e un bordo nero
-  opt.backgroundColor = !emu && !p.noBg ? hexRgb(p.bg) : undefined; opt.borderColor = !emu && !p.noBorder ? hexRgb(p.bc) : undefined;
+  opt.backgroundColor = !emu && !partial && bgo > 0 ? hexRgb(p.bg) : undefined; opt.borderColor = !emu && !p.noBorder ? hexRgb(p.bc) : undefined;
   if (e.type === "field") {
     const tf = form.createTextField(n); opt.textColor = hexRgb(p.color);
     if (p.valign === "top") tf.enableMultiline(); tf.disableScrolling(); if (p.max > 0) tf.setMaxLength(p.max);
@@ -1307,7 +1323,7 @@ async function addField(L, doc, page, e, taken, getFont, imgs) {
     const cb = form.createCheckBox(n); opt.textColor = L.rgb(0, 0, 0); cb.addToPage(page, opt); if (p.checked) cb.check(); if (p.req) cb.enableRequired();
     if (p.label) {   // l'etichetta è testo normale accanto alla casella
       const esc = p.label.replace(/&/g, "&amp;").replace(/</g, "&lt;"), lc = rp(e.x + e.w + 6 + 200, e.y + e.h / 2), lblBox = { x: lc[0] - 200, y: lc[1] - e.h / 2, w: 400, h: e.h, rot: rr };
-      await drawElement(L, doc, page, { type: "text", ...lblBox, props: { html: esc, font: "Arial", size: Math.min(14, e.h), bold: false, italic: false, strike: false, color: "#000000", bg: "#ffffff", noBg: true, align: "left", valign: "middle" } }, getFont, imgs);
+      await drawElement(L, doc, page, { type: "text", ...lblBox, props: { html: esc, font: "Arial", size: Math.min(14, e.h), bold: false, italic: false, strike: false, color: "#000000", bg: "#ffffff", bgo: 0, align: "left", valign: "middle" } }, getFont, imgs);
     }
   }
 }
