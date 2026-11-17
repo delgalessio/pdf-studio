@@ -189,7 +189,7 @@ button{font:inherit;color:inherit}
 .tile:hover{transform:translateY(-4px);box-shadow:var(--sh2)}
 .tile img{max-width:100%;max-height:200px;background:#fff;border-radius:4px;box-shadow:0 2px 8px rgba(30,40,100,.22);min-height:60px;min-width:60px;animation:fade .4s}
 .tile.sel{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-glow),var(--sh2)}
-.tile.cur .lab::after{content:" (aperta)";color:var(--acc);font-weight:600}
+.tile.cur .lab::after{content:attr(data-cur);color:var(--acc);font-weight:600}
 .tile.db{box-shadow:-7px 0 0 var(--acc),var(--sh1)}.tile.da{box-shadow:7px 0 0 var(--acc),var(--sh1)}
 .tile .lab{font-size:12.5px;text-align:center;overflow-wrap:anywhere;color:var(--mute)}
 .tile .bd{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:999px;font-size:11px;font-weight:600;padding:2px 9px;box-shadow:0 4px 10px var(--acc-glow)}
@@ -228,6 +228,12 @@ button{font:inherit;color:inherit}
 .seg button:focus-visible{outline:none;box-shadow:0 0 0 3px var(--acc-glow)}
 .flab{flex:1 0 100%;font-size:13px;color:var(--mute);margin-top:4px}
 .segs{display:flex;gap:10px}.segs .seg{flex:1}
+.langs{display:flex;gap:3px;padding:3px;border-radius:13px;background:var(--in);border:1px solid var(--hair)}
+.flagbtn{width:36px;height:30px;border:0;border-radius:10px;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0;opacity:.5;filter:saturate(.55);transition:opacity .2s,transform .22s var(--spring),box-shadow .2s,background .2s,filter .2s}
+.flagbtn svg{width:23px;height:16px;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.flagbtn:hover{opacity:1;transform:translateY(-1px)}
+.flagbtn[aria-pressed=true]{opacity:1;filter:none;background:var(--glass2);box-shadow:0 0 0 2px var(--acc),0 5px 14px var(--acc-glow)}
+.flagbtn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--acc-glow)}
 .notrans *,.notrans *::before,.notrans *::after{transition:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
@@ -245,6 +251,7 @@ button{font:inherit;color:inherit}
       <button class="btn icon-btn" id="btnRedo" disabled title="Ripristina (Ctrl+Y)" aria-label="Ripristina"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
     </div>
     <div class="docname" id="docName">Nessun documento aperto</div>
+    <div class="langs" role="group" aria-label="Lingua"><button class="flagbtn" id="langIt" title="Italiano" aria-label="Italiano"></button><button class="flagbtn" id="langEn" title="English" aria-label="English"></button></div>
     <button class="btn icon-btn" id="btnTheme" aria-label="Cambia tema" title="Tema chiaro o scuro"></button>
     <button class="btn" id="btnPanel" title="Mostra o nascondi il pannello"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>Pannello</button>
     <button class="btn primary" id="btnSave" disabled title="Esporta il PDF modificato come nuovo file"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/></svg>Salva PDF</button>
@@ -332,6 +339,9 @@ button{font:inherit;color:inherit}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 "use strict";
+let LANG = "it"; try { LANG = localStorage.getItem("pdfstudio-lang") === "en" ? "en" : "it"; } catch (e) {}   // per ora l'italiano è la lingua predefinita
+const DICT = {"orizzontale":"landscape","verticale":"portrait","Adatta alla larghezza": "Fit to width", "Aggiungi PDF…": "Add PDF…", "Apri PDF": "Open PDF", "Apri un PDF per iniziare": "Open a PDF to get started", "Avanti ▶": "Forward ▶", "Caricamento…": "Loading…", "Dividi in file separati": "Split into separate files", "Elimina selezionate": "Delete selected", "Estrai in un PDF": "Extract to a PDF", "Gestione pagine": "Page manager", "Intervalli di pagine": "Page ranges", "Nessun documento aperto": "No document open", "Pagine": "Pages", "Pannello": "Panel", "Ruota ↻": "Rotate ↻", "Salva PDF": "Save PDF", "Scegli un PDF": "Choose a PDF", "Seleziona tutte": "Select all", "◀ Indietro": "◀ Back", "Trascina qui un file oppure scegline uno dal computer. Il documento resta nel tuo browser e non viene caricato su nessun server.": "Drag a file here or choose one from your computer. The document stays in your browser and is never uploaded to any server.", "Annulla": "Undo", "Annulla (Ctrl+Z)": "Undo (Ctrl+Z)", "Cambia tema": "Change theme", "Campo di testo compilabile": "Fillable text field", "Casella di spunta": "Checkbox", "Casella di spunta compilabile": "Fillable checkbox", "Casella di testo": "Text box", "Chiudi": "Close", "Chiudi (Esc)": "Close (Esc)", "Elimina, riordina, estrai, dividi e unisci le pagine": "Delete, reorder, extract, split and merge pages", "Esporta il PDF modificato come nuovo file": "Export the edited PDF as a new file", "Forme": "Shapes", "Immagine": "Image", "Ingrandisci": "Zoom in", "Inserisci immagine (PNG o JPEG)": "Insert image (PNG or JPEG)", "Mano libera": "Freehand", "Mostra o nascondi il pannello": "Show or hide the panel", "Numero di pagina": "Page number", "Ogni intervallo diventa un file; senza intervalli, una pagina per file": "Each range becomes a file; with no ranges, one page per file", "Pagina precedente": "Previous page", "Pagina successiva": "Next page", "Pagine del documento": "Document pages", "Proprietà": "Properties", "Riduci zoom": "Zoom out", "Ripristina": "Redo", "Ripristina (Ctrl+Y)": "Redo (Ctrl+Y)", "Ruota di 90° in senso orario le pagine selezionate": "Rotate the selected pages 90° clockwise", "Ruota la pagina di 90° in senso orario": "Rotate the page 90° clockwise", "Salva le pagine indicate in un solo PDF nuovo": "Save the chosen pages into a single new PDF", "Selezione": "Selection", "Selezione (Esc)": "Selection (Esc)", "Sposta avanti le pagine selezionate": "Move the selected pages forward", "Sposta indietro le pagine selezionate": "Move the selected pages back", "Strumenti": "Tools", "Tema chiaro o scuro": "Light or dark theme", "es. 1-3, 5, 8-10 (vuoto = pagine selezionate)": "e.g. 1-3, 5, 8-10 (empty = selected pages)", "Lingua": "Language", " elementi": " items", " elemento": " item", " elemento/i non è stato esportato (dettagli nella console del browser).": " item(s) could not be exported (details in the browser console).", " file in ": " files in ", " file. Continuare?": " files. Continue?", " in questa pagina)": " on this page)", " di ": " of ", " (aperta)": " (open)", "Anteprima della pagina ": "Preview of page ", "Aggiungi alle pagine": "Add to pages", "Aggiunta dei PDF…": "Adding PDFs…", "Al centro": "Middle", "Al centro (una riga)": "Middle (one line)", "Allinea a destra": "Align right", "Allinea a sinistra": "Align left", "Allineamento": "Alignment", "Alt + clic": "Alt + click", "Altezza (pt)": "Height (pt)", "Altro colore…": "More colors…", "Apertura di ": "Opening ", "Apri come nuovo documento": "Open as a new document", "Apri prima un PDF.": "Open a PDF first.", "Apri prima un PDF: poi potrai inserire le immagini.": "Open a PDF first: then you can insert images.", "Arancione": "Orange", "Avanti": "Forward", "Azzurro": "Sky blue", "Barrato": "Strikethrough", "Base (pt)": "Width (pt)", "Bianco": "White", "Blu": "Blue", "Campo compilabile": "Fillable field", "Canc / Backspace": "Del / Backspace", "Carattere": "Font", "Centra": "Center", "Ci sono modifiche non salvate. Vuoi aprire un altro documento e perderle?": "You have unsaved changes. Do you want to open another document and lose them?", "Clic": "Click", "Colore": "Color", "Colore bordo": "Border color", "Colore del testo": "Text color", "Colore personalizzato": "Custom color", "Colore testo": "Text color", "Compilazione di prova (non salvata)": "Test fill (not saved)", "Contorno": "Outline", "Corsivo": "Italic", "Creati ": "Created ", "Creazione dei file…": "Creating the files…", "Creazione del PDF…": "Creating the PDF…", "Creazione del file ": "Creating file ", "Ctrl + rotellina": "Ctrl + scroll", "Dimensione": "Size", "Dimensione (pt, quadrata)": "Size (pt, square)", "Dimensione gomma": "Eraser size", "Dimensione testo (0 = auto)": "Text size (0 = auto)", "Disattiva «Compilazione di prova» per scrivere un testo tuo nel campo.": "Turn off “Test fill” to type your own text in the field.", "Doppio clic": "Double-click", "Elementi:": "Items:", "Elimina elemento": "Delete item", "Ellisse": "Ellipse", "Errore nel disegno della pagina: ": "Error drawing the page: ", "Esc o clic fuori": "Esc or click outside", "Esportazione non riuscita: ": "Export failed: ", "Etichetta (facoltativa)": "Label (optional)", "Evidenziatore": "Highlighter", "Forma": "Shape", "Formato:": "Size:", "Frecce ← →": "Arrow keys ← →", "Giallo": "Yellow", "Gomma": "Eraser", "Grassetto": "Bold", "Grigio": "Gray", "Il PDF è protetto da password: questa versione non può aprirlo.": "The PDF is password-protected: this version cannot open it.", "Il browser non riesce a mostrare l'anteprima di questa immagine, ma verrà inserita nel PDF.": "The browser can't show a preview of this image, but it will still be inserted into the PDF.", "Il file non è un PDF valido o è danneggiato.": "The file is not a valid PDF or is damaged.", "Il file resta nel tuo browser": "The file stays in your browser", "Il file scelto non è un PDF.": "The chosen file is not a PDF.", "Impossibile aggiungere «": "Cannot add «", "Impossibile aprire il PDF: ": "Cannot open the PDF: ", "Impossibile inserire l'immagine: ": "Cannot insert the image: ", "In alto": "Top", "In alto (testo su più righe)": "Top (text on several lines)", "In basso": "Bottom", "In basso (una riga)": "Bottom (one line)", "Indietro": "Backward", "Inserimento dell'immagine…": "Inserting the image…", "Intervalli non validi. Usa per esempio 1-3, 5, 8-10 (le pagine vanno da 1 a ": "Invalid ranges. Use for example 1-3, 5, 8-10 (pages go from 1 to ", "Le pagine del PDF vengono unite al documento": "The PDF's pages are merged into the document", "Libreria PDF.js non caricata. Controlla la connessione a internet e ricarica la pagina.": "PDF.js library not loaded. Check your internet connection and reload the page.", "Libreria ZIP non disponibile: i file vengono scaricati uno alla volta.": "ZIP library not available: the files are downloaded one at a time.", "Libreria pdf-lib non caricata. Controlla la connessione a internet e ricarica la pagina.": "pdf-lib library not loaded. Check your internet connection and reload the page.", "Libreria pdf-lib non caricata. Controlla la connessione a internet.": "pdf-lib library not loaded. Check your internet connection.", "Livello": "Layer", "Lunghezza massima (0 = libera)": "Maximum length (0 = unlimited)", "Maiusc + maniglie": "Shift + handles", "Maiusc + trascina": "Shift + drag", "Maniglie": "Handles", "Mantieni proporzioni": "Keep proportions", "Mantieni proporzioni (Maiusc)": "Keep proportions (Shift)", "Matita": "Pencil", "Mostra le scorciatoie": "Show the shortcuts", "Nero": "Black", "Nome del campo": "Field name", "Nome della casella": "Checkbox name", "Non puoi eliminare tutte le pagine del documento.": "You can't delete all the pages of the document.", "Obbligatoria": "Required", "Obbligatorio": "Required", "Opacità": "Opacity", "Opacità riempimento": "Fill opacity", "Opacità sfondo": "Background opacity", "Operazione non riuscita: ": "Operation failed: ", "PDF salvato come ": "PDF saved as ", "PDF salvato, ma ": "PDF saved, but ", "Pagina ": "Page ", "Pagina:": "Page:", "Pallini interni": "Inner dots", "Pallino in alto": "Top dot", "Passa al tema chiaro": "Switch to the light theme", "Passa al tema scuro": "Switch to the dark theme", "Per iniziare": "Getting started", "Primo piano": "Bring to front", "Punta": "Tip", "Punta quadrata": "Square tip", "Punta rotonda": "Round tip", "Questo PDF è protetto e non può essere modificato in questa versione.": "This PDF is protected and cannot be edited in this version.", "Qui si possono aggiungere solo PDF.": "Only PDFs can be added here.", "Raggio angoli (rettangolo)": "Corner radius (rectangle)", "Rettangolo": "Rectangle", "Riduci le scorciatoie a icona": "Collapse the shortcuts to an icon", "Riempimento": "Fill", "Rilascia per aprire il PDF": "Drop to open the PDF", "Rilascia per inserire l'immagine": "Drop to insert the image", "Rosso": "Red", "Rotazione (°)": "Rotation (°)", "Rotazione:": "Rotation:", "Salvato ": "Saved ", "Scegli uno strumento e trascina sulla pagina per creare un elemento, oppure selezionane uno per modificarlo.": "Choose a tool and drag on the page to create an item, or select one to edit it.", "Scorciatoie: ": "Shortcuts: ", "Scrittura": "Typing", "Secondo piano": "Send to back", "Seleziona delle pagine oppure scrivi un intervallo.": "Select some pages or type a range.", "Seleziona parole": "Select words", "Seleziona prima le pagine da eliminare.": "Select the pages to delete first.", "Seleziona prima le pagine da ruotare.": "Select the pages to rotate first.", "Selezionata all'inizio": "Checked at the start", "Senza bordo": "No border", "Senza contorno": "No outline", "Sfondo": "Background", "Sostituisce quello aperto": "Replaces the open one", "Sottolineato": "Underline", "Spessore": "Thickness", "Spessore bordo": "Border thickness", "Stato:": "Status:", "Tipo": "Type", "Trascina": "Drag", "Trascina un PDF qui": "Drag a PDF here", "Trascina un file PDF, oppure un'immagine PNG o JPEG.": "Drag a PDF file, or a PNG or JPEG image.", "Unisce il PDF in coda al documento": "Merges the PDF at the end of the document", "Verde": "Green", "Verranno creati ": "This will create ", "Verrà messa al centro della pagina aperta": "It will be placed in the center of the open page", "Viola": "Purple", "angoli arrotondati": "rounded corners", "annulla / ripristina": "undo / redo", "annulla l'ultima modifica al testo": "undo the last text change", "cambia pagina": "change page", "cancella i tratti a mano libera": "erase freehand strokes", "cancellano il testo, non la casella": "delete the text, not the box", "copia e incolla": "copy and paste", "dimensioni dell'immagine non leggibili": "the image size cannot be read", "disegna a mano libera": "draw freehand", "disegna il campo, poi scrivi un testo di prova": "draw the field, then type a test text", "disegna la casella, poi scrivi": "draw the box, then type", "disegna la forma": "draw the shape", "disegna una casella quadrata della misura che vuoi": "draw a square checkbox of any size", "elimina l'elemento": "delete the item", "errore sconosciuto": "unknown error", "file non valido": "invalid file", "il file non è un vero PNG o JPEG (potrebbe essere un altro formato con l'estensione cambiata, ad esempio WebP)": "the file is not a real PNG or JPEG (it may be another format with a changed extension, such as WebP)", "inserisce una casella 16 × 16": "inserts a 16 × 16 checkbox", "lettura del file non riuscita": "could not read the file", "mantieni le proporzioni": "keep proportions", "nessun PDF aperto": "no PDF open", "oppure usa Apri PDF": "or use Open PDF", "poi scegli il formato nel pannello": "then choose the format in the panel", "quadrato o cerchio perfetto": "perfect square or circle", "ruota (Maiusc: passi di 15°)": "rotate (Shift: 15° steps)", "scrivi nella casella": "type in the box", "scrivi un testo di prova (non salvato)": "type a test text (not saved)", "seleziona l'elemento sotto": "select the item underneath", "seleziona un elemento": "select an item", "sposta l'elemento": "move the item", "termina la scrittura": "finish typing", "torna alla selezione": "back to selection", "torna alla selezione per spostare o eliminare i tratti": "back to selection to move or delete strokes", "» contiene campi compilabili: dopo l'unione potrebbero non essere più compilabili.": "» contains fillable fields: after merging they may no longer be fillable.", "» non è un PDF.": "» is not a PDF.", "» è protetto da password: non può essere aggiunto.": "» is password-protected: it cannot be added.", "Doppio clic sul campo per scrivere un testo di prova: serve solo a vedere leggibilità e riempimento e non viene salvato nel PDF. In alto il testo va a capo su più righe fino a riempire il riquadro; al centro e in basso il PDF consente una sola riga. Quando lo spazio finisce, non si possono scrivere altri caratteri.": "Double-click the field to type a test text: it is only for checking readability and how much fits, and it is not saved in the PDF. At the top the text wraps over several lines until the box is full; in the middle and at the bottom the PDF allows a single line. When the space runs out, no more characters can be typed.", "Doppio clic sulla casella per scrivere. Mentre scrivi, i comandi di formato agiscono sul testo selezionato; con la casella solo selezionata valgono per tutto il testo.": "Double-click the box to type. While typing, the format controls act on the selected text; with the box merely selected they apply to all the text.", "<b>Attenzione:</b> questo PDF contiene campi compilabili che erano già presenti. Dopo eliminazioni, riordino o unioni, nel file salvato potrebbero non essere più compilabili.": "<b>Warning:</b> this PDF contains fillable fields that were already there. After deletions, reordering or merges, they may no longer be fillable in the saved file.", "<span>Espandi per scorciatoie</span>": "<span>Expand for shortcuts</span>"};
+const T = s => (LANG === "en" && DICT[s] !== undefined) ? DICT[s] : s;
 /* ===== Stato del documento: indipendente dal rendering =====
    Gli elementi (Fase 2+) useranno coordinate in PUNTI PDF riferite alla pagina
    come appare (rotazione inclusa), mai pixel dello schermo. */
@@ -358,11 +368,11 @@ function setLoading(on, txt) { $("loading").classList.toggle("on", on); if (txt)
 /* ===== Apertura ===== */
 async function openFile(file) {
   if (!file) return;
-  if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") { toast("Il file scelto non è un PDF.", true); return; }
-  if (S.dirty && !confirm("Ci sono modifiche non salvate. Vuoi aprire un altro documento e perderle?")) return;
-  if (typeof pdfjsLib === "undefined") { toast("Libreria PDF.js non caricata. Controlla la connessione a internet e ricarica la pagina.", true); return; }
+  if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") { toast(T("Il file scelto non è un PDF."), true); return; }
+  if (S.dirty && !confirm(T("Ci sono modifiche non salvate. Vuoi aprire un altro documento e perderle?"))) return;
+  if (typeof pdfjsLib === "undefined") { toast(T("Libreria PDF.js non caricata. Controlla la connessione a internet e ricarica la pagina."), true); return; }
   pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  setLoading(true, "Apertura di " + file.name + "…");
+  setLoading(true, T("Apertura di ") + file.name + "…");
   let newPdf = null;
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -370,9 +380,9 @@ async function openFile(file) {
   } catch (e) {
     setLoading(false);
     const n = e && e.name;
-    if (n === "PasswordException") toast("Il PDF è protetto da password: questa versione non può aprirlo.", true);
-    else if (n === "InvalidPDFException") toast("Il file non è un PDF valido o è danneggiato.", true);
-    else toast("Impossibile aprire il PDF: " + (e && e.message ? e.message : "errore sconosciuto"), true);
+    if (n === "PasswordException") toast(T("Il PDF è protetto da password: questa versione non può aprirlo."), true);
+    else if (n === "InvalidPDFException") toast(T("Il file non è un PDF valido o è danneggiato."), true);
+    else toast(T("Impossibile aprire il PDF: ") + (e && e.message ? e.message : T("errore sconosciuto")), true);
     return;           // il documento precedente resta aperto e intatto
   }
   releaseDocument();  // pulizia delle risorse del documento precedente
@@ -386,7 +396,7 @@ async function openFile(file) {
   try {
     await fitWidth(false);
     await render();
-  } catch (e) { toast("Errore nel disegno della pagina: " + e.message, true); }
+  } catch (e) { toast(T("Errore nel disegno della pagina: ") + e.message, true); }
   setLoading(false);
   updateUI();
 }
@@ -442,13 +452,13 @@ function goPage(n) {
   n = Math.min(Math.max(1, Math.round(n) || 1), S.numPages);
   if (!S.pdf || n === S.page) { $("pageNum").value = S.page; return; }
   S.page = n; $("work").scrollTop = 0;
-  render().catch(e => toast("Errore nel disegno della pagina: " + e.message, true));
+  render().catch(e => toast(T("Errore nel disegno della pagina: ") + e.message, true));
   updateUI();
 }
 function setZoom(z) {
   if (!S.pdf) return;
   S.zoom = Math.min(MAX_Z, Math.max(MIN_Z, z));
-  render().catch(e => toast("Errore nel disegno della pagina: " + e.message, true));
+  render().catch(e => toast(T("Errore nel disegno della pagina: ") + e.message, true));
   updateUI();
 }
 async function fitWidth(doRender = true) {
@@ -464,7 +474,7 @@ function updateUI() {
   const has = !!S.pdf;
   renderLegend(); $("btnSave").disabled = !has; $("btnPages").disabled = !has; $("btnRot").disabled = !has;
   $("btnUndo").disabled = !S.hist.length; $("btnRedo").disabled = !S.fut.length;
-  $("docName").textContent = has ? S.name + (S.dirty ? " •" : "") : "Nessun documento aperto";
+  $("docName").textContent = has ? S.name + (S.dirty ? " •" : "") : T("Nessun documento aperto");
   $("pageNum").disabled = !has; $("pageNum").value = S.page; $("pageNum").max = S.numPages;
   $("pageTot").textContent = has ? "/ " + S.numPages : "/ –";
   $("prev").disabled = !has || S.page <= 1;
@@ -475,11 +485,11 @@ function updateUI() {
   $("zVal").textContent = Math.round(S.zoom * 100) + "%";
   const st = $("status"); st.replaceChildren();
   const add = (k, v) => { const sp = document.createElement("span"), b = document.createElement("b"); sp.append(k + " "); b.textContent = v; sp.appendChild(b); st.appendChild(sp); };
-  if (!has) { add("Stato:", "nessun PDF aperto"); return; }
+  if (!has) { add(T("Stato:"), T("nessun PDF aperto")); return; }
   const ps = S.pageInfo[pkey(S.pages[S.page - 1] || {})], mm = v => Math.round(v * 25.4 / 72);
-  add("File:", S.name); add("Pagina:", S.page + " di " + S.numPages);
-  if (ps) { add("Formato:", mm(ps.w) + " × " + mm(ps.h) + " mm (" + (ps.w > ps.h ? "orizzontale" : "verticale") + ")"); add("Rotazione:", ps.rot + "°"); }
-  add("Elementi:", S.elements.length + " (" + S.elements.filter(e => e.page === S.page).length + " in questa pagina)");
+  add("File:", S.name); add(T("Pagina:"), S.page + T(" di ") + S.numPages);
+  if (ps) { add(T("Formato:"), mm(ps.w) + " × " + mm(ps.h) + " mm (" + (ps.w > ps.h ? T("orizzontale") : T("verticale")) + ")"); add(T("Rotazione:"), ps.rot + "°"); }
+  add(T("Elementi:"), S.elements.length + " (" + S.elements.filter(e => e.page === S.page).length + T(" in questa pagina)"));
 }
 
 $("btnOpen").onclick = $("btnOpen2").onclick = () => $("file").click();
@@ -503,10 +513,10 @@ const isImgFile = f => /\.(png|jpe?g)$/i.test(f.name) || /^image\/(png|jpeg)$/.t
 const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
 function showVeil(types) {
   const pdf = types.includes("application/pdf"), img = types.some(t => /^image\//.test(t)), unknown = !pdf && !img, z = [];
-  if (!$("dlg").hidden) z.push(["add", IC.plus, "Aggiungi alle pagine", "Le pagine del PDF vengono unite al documento"]);
-  else if (!S.pdf) z.push(["open", IC.doc, "Rilascia per aprire il PDF", "Il file resta nel tuo browser"]);
-  else if (img && !pdf) z.push(["image", IC.img, "Rilascia per inserire l'immagine", "Verrà messa al centro della pagina aperta"]);
-  else { z.push(["open", IC.doc, "Apri come nuovo documento", "Sostituisce quello aperto"]); if (pdf || unknown) z.push(["add", IC.plus, "Aggiungi alle pagine", "Unisce il PDF in coda al documento"]); }
+  if (!$("dlg").hidden) z.push(["add", IC.plus, T("Aggiungi alle pagine"), T("Le pagine del PDF vengono unite al documento")]);
+  else if (!S.pdf) z.push(["open", IC.doc, T("Rilascia per aprire il PDF"), T("Il file resta nel tuo browser")]);
+  else if (img && !pdf) z.push(["image", IC.img, T("Rilascia per inserire l'immagine"), T("Verrà messa al centro della pagina aperta")]);
+  else { z.push(["open", IC.doc, T("Apri come nuovo documento"), T("Sostituisce quello aperto")]); if (pdf || unknown) z.push(["add", IC.plus, T("Aggiungi alle pagine"), T("Unisce il PDF in coda al documento")]); }
   zonesBox.replaceChildren(); z.forEach(([act, ic, h, t]) => { const d = document.createElement("div"); d.className = "zone" + (z.length === 1 ? " hot" : ""); d.dataset.act = act; d.innerHTML = ic + "<h3></h3><p></p>"; d.querySelector("h3").textContent = h; d.querySelector("p").textContent = t; zonesBox.appendChild(d); });
   veil.classList.add("on"); veil.setAttribute("aria-hidden", "false");
 }
@@ -525,10 +535,10 @@ document.addEventListener("drop", e => {
 });
 async function handleDrop(files, act) {
   const pdfs = files.filter(isPdfFile), imgs = files.filter(isImgFile);
-  if (!pdfs.length && !imgs.length) { toast("Trascina un file PDF, oppure un'immagine PNG o JPEG.", true); return; }
+  if (!pdfs.length && !imgs.length) { toast(T("Trascina un file PDF, oppure un'immagine PNG o JPEG."), true); return; }
   const openIt = async () => { await openFile(pdfs[0]); if (pdfs.length > 1 && S.name === pdfs[0].name) addPdfs(pdfs.slice(1)); };
-  if (!$("dlg").hidden) { if (pdfs.length) await addPdfs(pdfs); else toast("Qui si possono aggiungere solo PDF.", true); return; }
-  if (!S.pdf) { if (pdfs.length) await openIt(); else toast("Apri prima un PDF: poi potrai inserire le immagini.", true); return; }
+  if (!$("dlg").hidden) { if (pdfs.length) await addPdfs(pdfs); else toast(T("Qui si possono aggiungere solo PDF."), true); return; }
+  if (!S.pdf) { if (pdfs.length) await openIt(); else toast(T("Apri prima un PDF: poi potrai inserire le immagini."), true); return; }
   if (pdfs.length) { if (act === "add") await addPdfs(pdfs); else await openIt(); return; }
   for (const f of imgs) await addImage(f);
 }
@@ -538,11 +548,11 @@ const SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M1
 function setTheme(t) {
   const root = document.documentElement; root.classList.add("notrans"); setTimeout(() => root.classList.remove("notrans"), 120);   // il cambio di tema è istantaneo, senza passaggi grigi
   document.documentElement.dataset.theme = t; try { localStorage.setItem("pdfstudio-theme", t); } catch (e) {}
-  const b = $("btnTheme"); b.innerHTML = t === "dark" ? SUN : MOON; b.title = t === "dark" ? "Passa al tema chiaro" : "Passa al tema scuro"; b.setAttribute("aria-label", b.title);
+  const b = $("btnTheme"); b.innerHTML = t === "dark" ? SUN : MOON; b.title = t === "dark" ? T("Passa al tema chiaro") : T("Passa al tema scuro"); b.setAttribute("aria-label", b.title);
 }
 setTheme(document.documentElement.dataset.theme || "light");
 $("btnTheme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-document.querySelectorAll(".tool").forEach(b => { b.dataset.tip = b.title; b.removeAttribute("title"); });   // suggerimenti grafici al posto di quelli di sistema
+document.querySelectorAll(".tool").forEach(b => { b.dataset.it = b.title; b.dataset.tip = T(b.title); b.removeAttribute("title"); });   // suggerimenti grafici al posto di quelli di sistema
 
 // Zoom con Ctrl + rotellina, frecce per cambiare pagina
 work.addEventListener("wheel", e => { if (e.ctrlKey && S.pdf) { e.preventDefault(); setZoom(S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
@@ -772,14 +782,14 @@ const PAL = [["#000000", "Nero"], ["#6b7280", "Grigio"], ["#ffffff", "Bianco"], 
 function palette(get, set) {   // dieci colori preimpostati più un colore personalizzato; set(colore, definitivo)
   const w = document.createElement("div"); w.className = "pal";
   const cust = document.createElement("label"), ci = document.createElement("input");
-  cust.className = "cust"; cust.title = "Altro colore…"; ci.type = "color"; ci.setAttribute("aria-label", "Colore personalizzato"); cust.appendChild(ci);
+  cust.className = "cust"; cust.title = T("Altro colore…"); ci.type = "color"; ci.setAttribute("aria-label", T("Colore personalizzato")); cust.appendChild(ci);
   const paint = () => {
     const v = (get() || "#000000").toLowerCase(), isPal = PAL.some(([c]) => c === v);
     w.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === v));
     cust.classList.toggle("on", !isPal); cust.style.background = isPal ? "" : v; ci.value = v;
   };
   PAL.forEach(([c, n]) => {
-    const b = document.createElement("button"); b.type = "button"; b.dataset.c = c; b.title = n; b.setAttribute("aria-label", n); b.style.background = c;
+    const b = document.createElement("button"); b.type = "button"; b.dataset.c = c; b.title = T(n); b.setAttribute("aria-label", T(n)); b.style.background = c;
     b.onmousedown = ev => ev.preventDefault(); b.onclick = () => { set(c, true); paint(); }; w.appendChild(b);
   });
   ci.oninput = () => { set(ci.value, false); paint(); }; ci.onchange = () => { set(ci.value, true); paint(); };
@@ -814,8 +824,8 @@ function segCtl(obj, key, opts) {   // gruppo di pulsanti con icona; opts: [[val
   paint(); return w;
 }
 function alignSegs(o, isField) {   // allineamento orizzontale e verticale con i simboli di Word
-  const H = [["left", "Allinea a sinistra", AIC.al], ["center", "Centra", AIC.ac], ["right", "Allinea a destra", AIC.ar]];
-  const V = isField ? [["top", "In alto (testo su più righe)", AIC.vt], ["middle", "Al centro (una riga)", AIC.vm], ["bottom", "In basso (una riga)", AIC.vb]] : [["top", "In alto", AIC.vt], ["middle", "Al centro", AIC.vm], ["bottom", "In basso", AIC.vb]];
+  const H = [["left", T("Allinea a sinistra"), AIC.al], ["center", T("Centra"), AIC.ac], ["right", T("Allinea a destra"), AIC.ar]];
+  const V = isField ? [["top", T("In alto (testo su più righe)"), AIC.vt], ["middle", T("Al centro (una riga)"), AIC.vm], ["bottom", T("In basso (una riga)"), AIC.vb]] : [["top", T("In alto"), AIC.vt], ["middle", T("Al centro"), AIC.vm], ["bottom", T("In basso"), AIC.vb]];
   const w = document.createElement("div"); w.className = "segs"; w.append(segCtl(o, "align", H), segCtl(o, "valign", V)); return w;
 }
 function ctl(obj, key, kind, opts) {
@@ -857,40 +867,40 @@ function renderProps() {
   const e = find(S.sel), type = e ? e.type : (S.tool !== "select" ? S.tool : null);
   const h = document.createElement("h2");
   if (!type) {
-    h.textContent = "Proprietà"; const p = document.createElement("p");
-    p.textContent = "Scegli uno strumento e trascina sulla pagina per creare un elemento, oppure selezionane uno per modificarlo.";
+    h.textContent = T("Proprietà"); const p = document.createElement("p");
+    p.textContent = T("Scegli uno strumento e trascina sulla pagina per creare un elemento, oppure selezionane uno per modificarlo.");
     box.append(h, p); return;
   }
   const o = e ? e.props : S.defs[type];
-  h.textContent = ({ shape: "Forma", text: "Casella di testo", draw: "Mano libera", image: "Immagine", field: "Campo di testo compilabile", check: "Casella di spunta" })[type];
+  h.textContent = ({ shape: T("Forma"), text: T("Casella di testo"), draw: T("Mano libera"), image: T("Immagine"), field: T("Campo di testo compilabile"), check: T("Casella di spunta") })[type];
   const f = document.createElement("div"); f.className = "form"; let fm = null;
-  if (type === "shape") f.append(row("Tipo", ctl(o, "kind", "seg", [["rect", "Rettangolo", AIC.rect], ["ellipse", "Ellisse", AIC.ell]])),
-    ...(e ? [row("Base (pt)", ctl(e, "w", "number", [1, 5000, 0])), row("Altezza (pt)", ctl(e, "h", "number", [1, 5000, 0]))] : []),
-    row("Riempimento", ctl(o, "fill", "color")), row("Opacità riempimento", ctl(o, "fo", "range", [0, 100, 0, "%"])),
-    row("Contorno", ctl(o, "stroke", "color")), row("Senza contorno", ctl(o, "noStroke", "checkbox")), row("Spessore", ctl(o, "sw", "range", [1, 40, 0, "pt"])), row("Mantieni proporzioni (Maiusc)", ctl(o, "lock", "checkbox")), row("Raggio angoli (rettangolo)", ctl(o, "r", "number", [0, 500, 0])), ...(e ? [row("Rotazione (°)", ctl(e, "rot", "number", [0, 359, 0]))] : []));
+  if (type === "shape") f.append(row(T("Tipo"), ctl(o, "kind", "seg", [["rect", T("Rettangolo"), AIC.rect], ["ellipse", T("Ellisse"), AIC.ell]])),
+    ...(e ? [row(T("Base (pt)"), ctl(e, "w", "number", [1, 5000, 0])), row(T("Altezza (pt)"), ctl(e, "h", "number", [1, 5000, 0]))] : []),
+    row(T("Riempimento"), ctl(o, "fill", "color")), row(T("Opacità riempimento"), ctl(o, "fo", "range", [0, 100, 0, "%"])),
+    row(T("Contorno"), ctl(o, "stroke", "color")), row(T("Senza contorno"), ctl(o, "noStroke", "checkbox")), row(T("Spessore"), ctl(o, "sw", "range", [1, 40, 0, "pt"])), row(T("Mantieni proporzioni (Maiusc)"), ctl(o, "lock", "checkbox")), row(T("Raggio angoli (rettangolo)"), ctl(o, "r", "number", [0, 500, 0])), ...(e ? [row(T("Rotazione (°)"), ctl(e, "rot", "number", [0, 359, 0]))] : []));
   else if (type === "draw") {
     const dd = e ? e.props : S.defs.draw[S.defs.draw.mode];
     if (!e) f.append(modeRow());
-    if (!e && S.defs.draw.mode === "eraser") f.append(row("Dimensione gomma", ctl(dd, "sw", "range", [1, 200, 0, "pt"])));
-    else f.append(row("Colore", ctl(dd, "color", "color")), row("Spessore", ctl(dd, "sw", "range", [1, 100, 0, "pt"])), row("Punta", ctl(dd, "cap", "seg", [["round", "Punta rotonda", AIC.round], ["square", "Punta quadrata", AIC.square]])), row("Opacità", ctl(dd, "op", "range", [5, 100, 0, "%"])));
+    if (!e && S.defs.draw.mode === "eraser") f.append(row(T("Dimensione gomma"), ctl(dd, "sw", "range", [1, 200, 0, "pt"])));
+    else f.append(row(T("Colore"), ctl(dd, "color", "color")), row(T("Spessore"), ctl(dd, "sw", "range", [1, 100, 0, "pt"])), row(T("Punta"), ctl(dd, "cap", "seg", [["round", T("Punta rotonda"), AIC.round], ["square", T("Punta quadrata"), AIC.square]])), row(T("Opacità"), ctl(dd, "op", "range", [5, 100, 0, "%"])));
   }
   else if (type === "field" || type === "check") fieldProps(f, o, e, type);
-  else if (type === "image") f.append(row("Mantieni proporzioni", ctl(o, "lock", "checkbox")), row("Base (pt)", ctl(e, "w", "number", [1, 5000, 0])), row("Altezza (pt)", ctl(e, "h", "number", [1, 5000, 0])), row("Rotazione (°)", ctl(e, "rot", "number", [0, 359, 0])));
-  else { fm = buildFmt(o); f.append(row("Sfondo", ctl(o, "bg", "color")), row("Opacità sfondo", ctl(o, "bgo", "range", [0, 100, 0, "%"])),
-    row("Allineamento", alignSegs(o, false))); }
+  else if (type === "image") f.append(row(T("Mantieni proporzioni"), ctl(o, "lock", "checkbox")), row(T("Base (pt)"), ctl(e, "w", "number", [1, 5000, 0])), row(T("Altezza (pt)"), ctl(e, "h", "number", [1, 5000, 0])), row(T("Rotazione (°)"), ctl(e, "rot", "number", [0, 359, 0])));
+  else { fm = buildFmt(o); f.append(row(T("Sfondo"), ctl(o, "bg", "color")), row(T("Opacità sfondo"), ctl(o, "bgo", "range", [0, 100, 0, "%"])),
+    row(T("Allineamento"), alignSegs(o, false))); }
   if (e) {
     const same = S.elements.filter(x => x.page === e.page), pos = same.indexOf(e), last = same.length - 1;
     const lay = document.createElement("div"), lt = document.createElement("span"), lg = document.createElement("div");
-    lt.textContent = "Livello"; lt.style.cssText = "font-size:13px;color:var(--mute)"; lg.className = "layers";
-    [["Primo piano", "front", pos === last], ["Avanti", "up", pos === last], ["Indietro", "down", pos === 0], ["Secondo piano", "back", pos === 0]].forEach(([t, m, off]) => {
+    lt.textContent = T("Livello"); lt.style.cssText = "font-size:13px;color:var(--mute)"; lg.className = "layers";
+    [[T("Primo piano"), "front", pos === last], [T("Avanti"), "up", pos === last], [T("Indietro"), "down", pos === 0], [T("Secondo piano"), "back", pos === 0]].forEach(([t, m, off]) => {
       const q = document.createElement("button"); q.type = "button"; q.className = "btn"; q.textContent = t; q.disabled = off; q.onclick = () => reorder(m); lg.appendChild(q);
     });
     lay.append(lt, lg); lay.style.cssText = "display:grid;gap:6px"; f.append(lay);
-    const b = document.createElement("button"); b.className = "btn"; b.textContent = "Elimina elemento"; b.onclick = delSel; f.append(b);
+    const b = document.createElement("button"); b.className = "btn"; b.textContent = T("Elimina elemento"); b.onclick = delSel; f.append(b);
   }
   box.append(h); if (fm) box.append(fm); box.append(f);
-  if (type === "field") { const q = document.createElement("p"); q.textContent = "Doppio clic sul campo per scrivere un testo di prova: serve solo a vedere leggibilità e riempimento e non viene salvato nel PDF. In alto il testo va a capo su più righe fino a riempire il riquadro; al centro e in basso il PDF consente una sola riga. Quando lo spazio finisce, non si possono scrivere altri caratteri."; box.append(q); }
-  if (type === "text") { const q = document.createElement("p"); q.textContent = "Doppio clic sulla casella per scrivere. Mentre scrivi, i comandi di formato agiscono sul testo selezionato; con la casella solo selezionata valgono per tutto il testo."; box.append(q); }
+  if (type === "field") { const q = document.createElement("p"); q.textContent = T("Doppio clic sul campo per scrivere un testo di prova: serve solo a vedere leggibilità e riempimento e non viene salvato nel PDF. In alto il testo va a capo su più righe fino a riempire il riquadro; al centro e in basso il PDF consente una sola riga. Quando lo spazio finisce, non si possono scrivere altri caratteri."); box.append(q); }
+  if (type === "text") { const q = document.createElement("p"); q.textContent = T("Doppio clic sulla casella per scrivere. Mentre scrivi, i comandi di formato agiscono sul testo selezionato; con la casella solo selezionata valgono per tutto il testo."); box.append(q); }
 }
 function reorder(mode) {   // l'ordine dell'array è l'ordine di sovrapposizione: l'ultimo sta sopra
   const e = find(S.sel); if (!e) return;
@@ -949,7 +959,7 @@ function redraw() {
 function startEdit(id, isNew) {
   if (S.editing) endEdit();
   const e0 = find(id);
-  if (e0 && e0.type === "field" && e0.props.demo) { S.sel = id; refresh(); toast("Disattiva «Compilazione di prova» per scrivere un testo tuo nel campo."); return; }
+  if (e0 && e0.type === "field" && e0.props.demo) { S.sel = id; refresh(); toast(T("Disattiva «Compilazione di prova» per scrivere un testo tuo nel campo.")); return; }
   S.sel = id; S.editing = id; S.editNew = !!isNew; if (!isNew) S.editPre = snap();
   refresh(); const t = edDiv(); if (!t) return;
   t.contentEditable = "true"; t.style.cursor = "text"; t.focus();
@@ -1001,46 +1011,46 @@ function applyFmt(kind, val) {
 }
 function buildFmt(o) {
   const d = document.createElement("div"); d.className = "fmt";
-  const sel = document.createElement("select"); sel.title = "Carattere";
+  const sel = document.createElement("select"); sel.title = T("Carattere");
   [["Arial", "Helvetica / Arial"], ["Times New Roman", "Times"], ["Courier New", "Courier"]].forEach(([v, t]) => { const x = document.createElement("option"); x.value = v; x.textContent = t; sel.appendChild(x); });
   sel.value = o.font; sel.onchange = () => applyFmt("font", sel.value);
-  const sz = document.createElement("input"); sz.type = "number"; sz.min = 4; sz.max = 200; sz.value = o.size; sz.title = "Dimensione";
+  const sz = document.createElement("input"); sz.type = "number"; sz.min = 4; sz.max = 200; sz.value = o.size; sz.title = T("Dimensione");
   sz.onchange = () => applyFmt("size", Math.min(200, Math.max(4, Math.round(parseFloat(sz.value)) || 14)));
   const btn = (l, t, k) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn icon-btn"; b.innerHTML = l; b.title = t; b.onmousedown = ev => ev.preventDefault(); b.onclick = () => applyFmt(k); return b; };
-  let cur = o.color; const col = palette(() => cur, (c, final) => { if (final) { cur = c; applyFmt("color", c); } }); col.style.flex = "1 0 100%"; const lab = document.createElement("span"); lab.className = "flab"; lab.textContent = "Colore del testo";
-  d.append(sel, sz, btn("<b>B</b>", "Grassetto", "bold"), btn("<i>I</i>", "Corsivo", "italic"), btn("<s>S</s>", "Barrato", "strike"), btn("<u>U</u>", "Sottolineato", "underline"), lab, col);
+  let cur = o.color; const col = palette(() => cur, (c, final) => { if (final) { cur = c; applyFmt("color", c); } }); col.style.flex = "1 0 100%"; const lab = document.createElement("span"); lab.className = "flab"; lab.textContent = T("Colore del testo");
+  d.append(sel, sz, btn("<b>B</b>", T("Grassetto"), "bold"), btn("<i>I</i>", T("Corsivo"), "italic"), btn("<s>S</s>", T("Barrato"), "strike"), btn("<u>U</u>", T("Sottolineato"), "underline"), lab, col);
   return d;
 }
 
 /* Legenda dinamica delle scorciatoie: cambia con lo strumento e con lo stato */
 S.legendOpen = false;   // di default ridotta a icona
 function legendItems() {
-  if (!S.pdf) return ["Per iniziare", [["Trascina un PDF qui", "oppure usa Apri PDF"]]];
-  if (S.editing) return ["Scrittura", [["Seleziona parole", "poi scegli il formato nel pannello"], ["Esc o clic fuori", "termina la scrittura"], ["Ctrl + Z", "annulla l'ultima modifica al testo"], ["Canc / Backspace", "cancellano il testo, non la casella"]]];
+  if (!S.pdf) return [T("Per iniziare"), [[T("Trascina un PDF qui"), T("oppure usa Apri PDF")]]];
+  if (S.editing) return [T("Scrittura"), [[T("Seleziona parole"), T("poi scegli il formato nel pannello")], [T("Esc o clic fuori"), T("termina la scrittura")], ["Ctrl + Z", T("annulla l'ultima modifica al testo")], [T("Canc / Backspace"), T("cancellano il testo, non la casella")]]];
   if (S.tool === "draw") {
     const m = S.defs.draw.mode;
-    return m === "eraser" ? ["Gomma", [["Trascina", "cancella i tratti a mano libera"], ["Esc", "torna alla selezione"]]]
-      : [m === "pencil" ? "Matita" : "Evidenziatore", [["Trascina", "disegna a mano libera"], ["Esc", "torna alla selezione per spostare o eliminare i tratti"]]];
+    return m === "eraser" ? [T("Gomma"), [[T("Trascina"), T("cancella i tratti a mano libera")], ["Esc", T("torna alla selezione")]]]
+      : [m === "pencil" ? T("Matita") : T("Evidenziatore"), [[T("Trascina"), T("disegna a mano libera")], ["Esc", T("torna alla selezione per spostare o eliminare i tratti")]]];
   }
-  if (S.tool === "field") return ["Campo compilabile", [["Trascina", "disegna il campo, poi scrivi un testo di prova"], ["Esc", "torna alla selezione"]]];
-  if (S.tool === "check") return ["Casella di spunta", [["Clic", "inserisce una casella 16 × 16"], ["Trascina", "disegna una casella quadrata della misura che vuoi"], ["Esc", "torna alla selezione"]]];
-  if (S.tool === "shape") return ["Forma", [["Trascina", "disegna la forma"], ["Maiusc + trascina", "quadrato o cerchio perfetto"], ["Esc", "torna alla selezione"]]];
-  if (S.tool === "text") return ["Casella di testo", [["Trascina", "disegna la casella, poi scrivi"], ["Esc", "torna alla selezione"]]];
-  const e = find(S.sel), common = [["Alt + clic", "seleziona l'elemento sotto"], ["Ctrl + Z / Y", "annulla / ripristina"], ["Ctrl + C / V", "copia e incolla"]];
-  if (!e) return ["Selezione", [["Clic", "seleziona un elemento"], ...common, ["Frecce ← →", "cambia pagina"], ["Ctrl + rotellina", "zoom"]]];
-  const own = (e.type === "text" || e.type === "field") ? [["Doppio clic", e.type === "field" ? "scrivi un testo di prova (non salvato)" : "scrivi nella casella"]]
-    : [["Maiusc + maniglie", "mantieni le proporzioni"], ...(e.props.kind === "rect" ? [["Pallini interni", "angoli arrotondati"]] : []), ...(e.type === "shape" || e.type === "image" ? [["Pallino in alto", "ruota (Maiusc: passi di 15°)"]] : [])];
-  return ["Selezione", [["Trascina", "sposta l'elemento"], ["Maniglie", "ridimensiona"], ...own, ["Canc / Backspace", "elimina l'elemento"], ...common]];
+  if (S.tool === "field") return [T("Campo compilabile"), [[T("Trascina"), T("disegna il campo, poi scrivi un testo di prova")], ["Esc", T("torna alla selezione")]]];
+  if (S.tool === "check") return [T("Casella di spunta"), [[T("Clic"), T("inserisce una casella 16 × 16")], [T("Trascina"), T("disegna una casella quadrata della misura che vuoi")], ["Esc", T("torna alla selezione")]]];
+  if (S.tool === "shape") return [T("Forma"), [[T("Trascina"), T("disegna la forma")], [T("Maiusc + trascina"), T("quadrato o cerchio perfetto")], ["Esc", T("torna alla selezione")]]];
+  if (S.tool === "text") return [T("Casella di testo"), [[T("Trascina"), T("disegna la casella, poi scrivi")], ["Esc", T("torna alla selezione")]]];
+  const e = find(S.sel), common = [[T("Alt + clic"), T("seleziona l'elemento sotto")], ["Ctrl + Z / Y", T("annulla / ripristina")], ["Ctrl + C / V", T("copia e incolla")]];
+  if (!e) return [T("Selezione"), [[T("Clic"), T("seleziona un elemento")], ...common, [T("Frecce ← →"), T("cambia pagina")], [T("Ctrl + rotellina"), "zoom"]]];
+  const own = (e.type === "text" || e.type === "field") ? [[T("Doppio clic"), e.type === "field" ? T("scrivi un testo di prova (non salvato)") : T("scrivi nella casella")]]
+    : [[T("Maiusc + maniglie"), T("mantieni le proporzioni")], ...(e.props.kind === "rect" ? [[T("Pallini interni"), T("angoli arrotondati")]] : []), ...(e.type === "shape" || e.type === "image" ? [[T("Pallino in alto"), T("ruota (Maiusc: passi di 15°)")]] : [])];
+  return [T("Selezione"), [[T("Trascina"), T("sposta l'elemento")], [T("Maniglie"), "ridimensiona"], ...own, [T("Canc / Backspace"), T("elimina l'elemento")], ...common]];
 }
 function renderLegend() {
   const [title, items] = legendItems(), box = $("legend"), open = S.legendOpen; box.replaceChildren();
   box.className = "legend" + (open ? "" : " mini");
   const h = document.createElement("div"); h.className = "lh";
   const b = document.createElement("button"); b.type = "button"; b.className = "btn";
-  b.title = open ? "Riduci le scorciatoie a icona" : "Mostra le scorciatoie"; b.setAttribute("aria-label", b.title); b.setAttribute("aria-expanded", open);
-  b.innerHTML = '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>' + (open ? "" : "<span>Espandi per scorciatoie</span>");
+  b.title = open ? T("Riduci le scorciatoie a icona") : T("Mostra le scorciatoie"); b.setAttribute("aria-label", b.title); b.setAttribute("aria-expanded", open);
+  b.innerHTML = '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>' + (open ? "" : T("<span>Espandi per scorciatoie</span>"));
   b.onclick = () => { S.legendOpen = !S.legendOpen; renderLegend(); }; h.appendChild(b);
-  if (open) { const t = document.createElement("span"); t.textContent = "Scorciatoie: " + title; h.appendChild(t); }
+  if (open) { const t = document.createElement("span"); t.textContent = T("Scorciatoie: ") + title; h.appendChild(t); }
   box.appendChild(h); if (!open) return;
   const cols = document.createElement("div"); cols.className = "cols"; const half = Math.ceil(items.length / 2);
   [items.slice(0, half), items.slice(half)].forEach(list => {
@@ -1121,7 +1131,7 @@ function eraseAt(c, r) {
 }
 function modeRow() {   // matita, evidenziatore e gomma, con un'immagine al posto del testo
   const d = document.createElement("div"); d.className = "seg";
-  [["pencil", "Matita", AIC.pencil], ["highlighter", "Evidenziatore", AIC.hl], ["eraser", "Gomma", AIC.er]].forEach(([m, t, ic]) => {
+  [["pencil", T("Matita"), AIC.pencil], ["highlighter", T("Evidenziatore"), AIC.hl], ["eraser", T("Gomma"), AIC.er]].forEach(([m, t, ic]) => {
     const b = document.createElement("button"), on = S.defs.draw.mode === m; b.type = "button"; b.title = t; b.setAttribute("aria-label", t); b.innerHTML = ic; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
     b.onclick = () => { S.defs.draw.mode = m; drawElements(); renderProps(); updateUI(); }; d.appendChild(b);
   });
@@ -1133,7 +1143,7 @@ function fastMove(e, d) {   // durante il trascinamento si sposta solo l'element
   n.setAttribute("transform", "translate(" + (e.x - d.ox) + " " + (e.y - d.oy) + ")" + (e.rot ? " rotate(" + e.rot + " " + (d.ox + e.w / 2) + " " + (d.oy + e.h / 2) + ")" : ""));
   drawSel();
 }
-function pickImage() { if (!S.pdf) { toast("Apri prima un PDF.", true); return; } $("imgFile").click(); }
+function pickImage() { if (!S.pdf) { toast(T("Apri prima un PDF."), true); return; } $("imgFile").click(); }
 function sniffImage(b) {   // riconosce PNG/JPEG dal contenuto e legge le dimensioni senza decodificarli
   if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47)
     return { mime: "image/png", w: (b[16] << 24 | b[17] << 16 | b[18] << 8 | b[19]) >>> 0, h: (b[20] << 24 | b[21] << 16 | b[22] << 8 | b[23]) >>> 0 };
@@ -1150,21 +1160,21 @@ function sniffImage(b) {   // riconosce PNG/JPEG dal contenuto e legge le dimens
   return null;
 }
 async function addImage(f) {
-  setLoading(true, "Inserimento dell'immagine…");
+  setLoading(true, T("Inserimento dell'immagine…"));
   try {
     const bytes = new Uint8Array(await f.arrayBuffer()), info = sniffImage(bytes);
-    if (!info) throw new Error("il file non è un vero PNG o JPEG (potrebbe essere un altro formato con l'estensione cambiata, ad esempio WebP)");
-    const url = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ko(new Error("lettura del file non riuscita")); r.readAsDataURL(new Blob([bytes], { type: info.mime })); });
+    if (!info) throw new Error(T("il file non è un vero PNG o JPEG (potrebbe essere un altro formato con l'estensione cambiata, ad esempio WebP)"));
+    const url = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ko(new Error(T("lettura del file non riuscita"))); r.readAsDataURL(new Blob([bytes], { type: info.mime })); });
     let nw = info.w, nh = info.h, shown = true; const im = new Image();
     try { await new Promise((ok, ko) => { im.onload = ok; im.onerror = ko; im.src = url; }); nw = im.naturalWidth || nw; nh = im.naturalHeight || nh; } catch (x) { shown = false; }
-    if (!nw || !nh) throw new Error("dimensioni dell'immagine non leggibili");
+    if (!nw || !nh) throw new Error(T("dimensioni dell'immagine non leggibili"));
     const id = nextAsset++; S.assets[id] = { url, bytes, mime: info.mime };
     const ps = S.pageSize; let k = Math.min(1, ps.w * .6 / nw, ps.h * .6 / nh); if (nw * k < 24 && nh * k < 24) k = 24 / Math.max(nw, nh);   // le immagini minuscole si ingrandiscono per poterle afferrare
     const w = Math.max(4, nw * k), h = Math.max(4, nh * k), pre = snap();
     const e = { id: nextId++, type: "image", page: S.page, x: Math.round((ps.w - w) / 2), y: Math.round((ps.h - h) / 2), w: Math.round(w), h: Math.round(h), rot: 0, props: { asset: id, lock: true } };
     S.elements.push(e); commit(pre); setTool("select"); S.sel = e.id; refresh();
-    if (!shown) toast("Il browser non riesce a mostrare l'anteprima di questa immagine, ma verrà inserita nel PDF.", true);
-  } catch (err) { toast("Impossibile inserire l'immagine: " + err.message, true); }
+    if (!shown) toast(T("Il browser non riesce a mostrare l'anteprima di questa immagine, ma verrà inserita nel PDF."), true);
+  } catch (err) { toast(T("Impossibile inserire l'immagine: ") + err.message, true); }
   setLoading(false);
 }
 document.querySelector('[data-act="image"]').onclick = pickImage;
@@ -1282,16 +1292,16 @@ function uniqueName(raw, props) {   // nome non vuoto, senza punti o spazi e div
   while (u.has(n)) n = base + "_" + i++; return n;
 }
 function fieldProps(f, o, e, type) {
-  const sz1 = e ? [row("Dimensione (pt, quadrata)", ctl(e, "w", "number", [4, 500, 0]))] : [];
-  const sz = e ? [row("Base (pt)", ctl(e, "w", "number", [4, 5000, 0])), row("Altezza (pt)", ctl(e, "h", "number", [4, 5000, 0]))] : [];
-  const look = [row("Sfondo", ctl(o, "bg", "color")), row("Opacità sfondo", ctl(o, "bgo", "range", [0, 100, 0, "%"])), row("Colore bordo", ctl(o, "bc", "color")),
-    row("Senza bordo", ctl(o, "noBorder", "checkbox")), row("Spessore bordo", ctl(o, "bw", "range", [1, 10, 0, "pt"]))];
-  if (type === "field") f.append(...(e ? [row("Nome del campo", ctl(o, "name", "text")), row("Compilazione di prova (non salvata)", ctl(o, "demo", "checkbox"))] : []), ...sz,
-    row("Dimensione testo (0 = auto)", ctl(o, "size", "number", [0, 72, 0])), row("Colore testo", ctl(o, "color", "color")),
-    row("Allineamento", alignSegs(o, true)),
-    row("Lunghezza massima (0 = libera)", ctl(o, "max", "number", [0, 5000, 0])), row("Obbligatorio", ctl(o, "req", "checkbox")), ...look);
-  else f.append(...(e ? [row("Nome della casella", ctl(o, "name", "text"))] : []), row("Etichetta (facoltativa)", ctl(o, "label", "text")), ...sz1,
-    row("Selezionata all'inizio", ctl(o, "checked", "checkbox")), row("Obbligatoria", ctl(o, "req", "checkbox")), ...look);
+  const sz1 = e ? [row(T("Dimensione (pt, quadrata)"), ctl(e, "w", "number", [4, 500, 0]))] : [];
+  const sz = e ? [row(T("Base (pt)"), ctl(e, "w", "number", [4, 5000, 0])), row(T("Altezza (pt)"), ctl(e, "h", "number", [4, 5000, 0]))] : [];
+  const look = [row(T("Sfondo"), ctl(o, "bg", "color")), row(T("Opacità sfondo"), ctl(o, "bgo", "range", [0, 100, 0, "%"])), row(T("Colore bordo"), ctl(o, "bc", "color")),
+    row(T("Senza bordo"), ctl(o, "noBorder", "checkbox")), row(T("Spessore bordo"), ctl(o, "bw", "range", [1, 10, 0, "pt"]))];
+  if (type === "field") f.append(...(e ? [row(T("Nome del campo"), ctl(o, "name", "text")), row(T("Compilazione di prova (non salvata)"), ctl(o, "demo", "checkbox"))] : []), ...sz,
+    row(T("Dimensione testo (0 = auto)"), ctl(o, "size", "number", [0, 72, 0])), row(T("Colore testo"), ctl(o, "color", "color")),
+    row(T("Allineamento"), alignSegs(o, true)),
+    row(T("Lunghezza massima (0 = libera)"), ctl(o, "max", "number", [0, 5000, 0])), row(T("Obbligatorio"), ctl(o, "req", "checkbox")), ...look);
+  else f.append(...(e ? [row(T("Nome della casella"), ctl(o, "name", "text"))] : []), row(T("Etichetta (facoltativa)"), ctl(o, "label", "text")), ...sz1,
+    row(T("Selezionata all'inizio"), ctl(o, "checked", "checkbox")), row(T("Obbligatoria"), ctl(o, "req", "checkbox")), ...look);
 }
 const pageMap = page => {
   const cb = page.getCropBox(), R = ((page.getRotation().angle % 360) + 360) % 360, W = cb.width, H = cb.height;
@@ -1367,16 +1377,16 @@ function download(name, data, type) {
 const baseName = () => S.name.replace(/\.pdf$/i, "");
 async function exportPdf() {
   if (!S.pdf || !S.bytes) return;
-  if (typeof PDFLib === "undefined") { toast("Libreria pdf-lib non caricata. Controlla la connessione a internet e ricarica la pagina.", true); return; }
+  if (typeof PDFLib === "undefined") { toast(T("Libreria pdf-lib non caricata. Controlla la connessione a internet e ricarica la pagina."), true); return; }
   if (S.editing) endEdit();
-  setLoading(true, "Creazione del PDF…");
+  setLoading(true, T("Creazione del PDF…"));
   try {
     const { bytes, failed } = await buildPdf(S.pages.map((_, i) => i + 1)), name = baseName() + "-modificato.pdf";
     download(name, bytes, "application/pdf"); S.dirty = false; updateUI();
-    toast(failed ? "PDF salvato, ma " + failed + " elemento/i non è stato esportato (dettagli nella console del browser)." : "PDF salvato come " + name, !!failed);
+    toast(failed ? T("PDF salvato, ma ") + failed + T(" elemento/i non è stato esportato (dettagli nella console del browser).") : T("PDF salvato come ") + name, !!failed);
   } catch (err) {
     console.error(err);
-    toast(/encrypt/i.test(err && err.message) ? "Questo PDF è protetto e non può essere modificato in questa versione." : "Esportazione non riuscita: " + (err && err.message ? err.message : "errore sconosciuto"), true);
+    toast(/encrypt/i.test(err && err.message) ? T("Questo PDF è protetto e non può essere modificato in questa versione.") : T("Esportazione non riuscita: ") + (err && err.message ? err.message : T("errore sconosciuto")), true);
   }
   setLoading(false);
 }
@@ -1406,13 +1416,13 @@ function applyPages(newPages, mapOld) {   // mapOld(vecchio indice da 1) -> nuov
   S.pages = newPages; S.numPages = newPages.length;
   const k = newPages.findIndex(p => p.id === curId); S.page = k >= 0 ? k + 1 : Math.min(S.page, S.numPages);
   S.sel = null; commit(pre); S.dirty = true;
-  render().catch(e => toast("Errore nel disegno della pagina: " + e.message, true)); refresh(); renderThumbs();
+  render().catch(e => toast(T("Errore nel disegno della pagina: ") + e.message, true)); refresh(); renderThumbs();
 }
 function pagesMove(ord) { const inv = []; ord.forEach((o, i) => inv[o] = i + 1); applyPages(ord.map(o => S.pages[o - 1]), o => inv[o]); }
 function pagesDelete() {
   const del = new Set(pgSel);
-  if (!del.size) { toast("Seleziona prima le pagine da eliminare.", true); return; }
-  if (del.size >= S.pages.length) { toast("Non puoi eliminare tutte le pagine del documento.", true); return; }
+  if (!del.size) { toast(T("Seleziona prima le pagine da eliminare."), true); return; }
+  if (del.size >= S.pages.length) { toast(T("Non puoi eliminare tutte le pagine del documento."), true); return; }
   const map = []; let k = 0; S.pages.forEach((_, i) => { map[i + 1] = del.has(i + 1) ? 0 : ++k; });
   pgSel = []; applyPages(S.pages.filter((_, i) => !del.has(i + 1)), o => map[o]);
 }
@@ -1432,9 +1442,9 @@ function dropMove(t, after) {   // sposta le pagine selezionate prima o dopo la 
 }
 async function addPdfs(files) {   // unione: le pagine dei nuovi PDF vanno dopo la selezione, altrimenti in fondo
   if (!S.pdf || typeof pdfjsLib === "undefined") return;
-  setLoading(true, "Aggiunta dei PDF…");
+  setLoading(true, T("Aggiunta dei PDF…"));
   for (const f of files) {
-    if (!/\.pdf$/i.test(f.name) && f.type !== "application/pdf") { toast("«" + f.name + "» non è un PDF.", true); continue; }
+    if (!/\.pdf$/i.test(f.name) && f.type !== "application/pdf") { toast("«" + f.name + T("» non è un PDF."), true); continue; }
     try {
       const bytes = new Uint8Array(await f.arrayBuffer()), pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
       let hasForm = false; try { hasForm = !!(await pdf.getFieldObjects()); } catch (x) {}
@@ -1442,9 +1452,9 @@ async function addPdfs(files) {   // unione: le pagine dei nuovi PDF vanno dopo 
       const add = Array.from({ length: pdf.numPages }, (_, i) => ({ id: nextPid++, src: si, n: i + 1 })), pos = pgSel.length ? Math.max(...pgSel) : S.pages.length;
       applyPages([...S.pages.slice(0, pos), ...add, ...S.pages.slice(pos)], o => o <= pos ? o : o + add.length);
       pgSel = add.map((_, i) => pos + i + 1); pgAnchor = pos + 1; renderThumbs();
-      if (hasForm) toast("«" + f.name + "» contiene campi compilabili: dopo l'unione potrebbero non essere più compilabili.");
+      if (hasForm) toast("«" + f.name + T("» contiene campi compilabili: dopo l'unione potrebbero non essere più compilabili."));
     } catch (e) {
-      toast(e && e.name === "PasswordException" ? "«" + f.name + "» è protetto da password: non può essere aggiunto." : "Impossibile aggiungere «" + f.name + "»: " + (e && e.message ? e.message : "file non valido"), true);
+      toast(e && e.name === "PasswordException" ? "«" + f.name + T("» è protetto da password: non può essere aggiunto.") : T("Impossibile aggiungere «") + f.name + "»: " + (e && e.message ? e.message : T("file non valido")), true);
     }
   }
   setLoading(false);
@@ -1460,27 +1470,27 @@ function parseRanges(str, max) {   // "1-3, 5, 8-10" -> [[1,2,3],[5],[8,9,10]]; 
 }
 const rangeLabel = r => r.length === 1 ? "" + r[0] : r[0] + "-" + r[r.length - 1];
 async function pagesExtract(split) {
-  if (typeof PDFLib === "undefined") { toast("Libreria pdf-lib non caricata. Controlla la connessione a internet.", true); return; }
+  if (typeof PDFLib === "undefined") { toast(T("Libreria pdf-lib non caricata. Controlla la connessione a internet."), true); return; }
   const txt = $("rng").value.trim(); let parts;
-  if (txt) { parts = parseRanges(txt, S.pages.length); if (!parts) { toast("Intervalli non validi. Usa per esempio 1-3, 5, 8-10 (le pagine vanno da 1 a " + S.pages.length + ").", true); return; } }
+  if (txt) { parts = parseRanges(txt, S.pages.length); if (!parts) { toast(T("Intervalli non validi. Usa per esempio 1-3, 5, 8-10 (le pagine vanno da 1 a ") + S.pages.length + ").", true); return; } }
   else if (split) parts = S.pages.map((_, i) => [i + 1]);
   else if (pgSel.length) parts = [[...pgSel]];
-  else { toast("Seleziona delle pagine oppure scrivi un intervallo.", true); return; }
+  else { toast(T("Seleziona delle pagine oppure scrivi un intervallo."), true); return; }
   if (!split) parts = [[...new Set(parts.flat())]];
-  if (split && !txt && parts.length > 40 && !confirm("Verranno creati " + parts.length + " file. Continuare?")) return;
-  setLoading(true, "Creazione dei file…");
+  if (split && !txt && parts.length > 40 && !confirm(T("Verranno creati ") + parts.length + T(" file. Continuare?"))) return;
+  setLoading(true, T("Creazione dei file…"));
   try {
     const files = [];
     for (const [k, r] of parts.entries()) {
-      setLoading(true, "Creazione del file " + (k + 1) + " di " + parts.length + "…");
+      setLoading(true, T("Creazione del file ") + (k + 1) + T(" di ") + parts.length + "…");
       files.push({ name: baseName() + (split ? "-parte-" + (k + 1) + "-pag-" + rangeLabel(r) : "-estratto") + ".pdf", bytes: (await buildPdf(r)).bytes });
     }
-    if (files.length === 1) { download(files[0].name, files[0].bytes, "application/pdf"); toast("Salvato " + files[0].name); }
+    if (files.length === 1) { download(files[0].name, files[0].bytes, "application/pdf"); toast(T("Salvato ") + files[0].name); }
     else if (typeof JSZip !== "undefined") {
       const z = new JSZip(); files.forEach(f => z.file(f.name, f.bytes));
-      download(baseName() + "-diviso.zip", await z.generateAsync({ type: "uint8array" }), "application/zip"); toast("Creati " + files.length + " file in " + baseName() + "-diviso.zip");
-    } else { files.forEach((f, i) => setTimeout(() => download(f.name, f.bytes, "application/pdf"), i * 400)); toast("Libreria ZIP non disponibile: i file vengono scaricati uno alla volta."); }
-  } catch (e) { console.error(e); toast("Operazione non riuscita: " + (e && e.message ? e.message : "errore sconosciuto"), true); }
+      download(baseName() + "-diviso.zip", await z.generateAsync({ type: "uint8array" }), "application/zip"); toast(T("Creati ") + files.length + T(" file in ") + baseName() + "-diviso.zip");
+    } else { files.forEach((f, i) => setTimeout(() => download(f.name, f.bytes, "application/pdf"), i * 400)); toast(T("Libreria ZIP non disponibile: i file vengono scaricati uno alla volta.")); }
+  } catch (e) { console.error(e); toast(T("Operazione non riuscita: ") + (e && e.message ? e.message : T("errore sconosciuto")), true); }
   setLoading(false);
 }
 async function thumbFor(pg) {
@@ -1497,10 +1507,12 @@ function paintSel() {
 function renderInfo() {
   const risk = S.sources.some(x => x.hasForm) && !isPlain(), box = $("dlgInfo"); box.replaceChildren();
   const t = document.createElement("span");
-  t.textContent = S.pages.length + (S.pages.length === 1 ? " pagina" : " pagine") + (S.sources.length > 1 ? " da " + S.sources.length + " file" : "") + " · " + pgSel.length + " selezionat" + (pgSel.length === 1 ? "a" : "e") +
-    ". Clic per selezionare (Ctrl o Maiusc per più pagine), trascina per riordinare, doppio clic per aprire la pagina.";
+  const nP = S.pages.length, nS = pgSel.length, nF = S.sources.length;
+  t.textContent = LANG === "en"
+    ? nP + (nP === 1 ? " page" : " pages") + (nF > 1 ? " from " + nF + " files" : "") + " · " + nS + " selected. Click to select (Ctrl or Shift for several pages), drag to reorder, double-click to open the page."
+    : nP + (nP === 1 ? " pagina" : " pagine") + (nF > 1 ? " da " + nF + " file" : "") + " · " + nS + " selezionat" + (nS === 1 ? "a" : "e") + ". Clic per selezionare (Ctrl o Maiusc per più pagine), trascina per riordinare, doppio clic per aprire la pagina.";
   box.appendChild(t);
-  if (risk) { const w = document.createElement("div"); w.innerHTML = "<b>Attenzione:</b> questo PDF contiene campi compilabili che erano già presenti. Dopo eliminazioni, riordino o unioni, nel file salvato potrebbero non essere più compilabili."; box.appendChild(w); }
+  if (risk) { const w = document.createElement("div"); w.innerHTML = T("<b>Attenzione:</b> questo PDF contiene campi compilabili che erano già presenti. Dopo eliminazioni, riordino o unioni, nel file salvato potrebbero non essere più compilabili."); box.appendChild(w); }
 }
 function renderThumbs() {
   const dlg = $("dlg"); if (dlg.hidden) return;
@@ -1509,9 +1521,9 @@ function renderThumbs() {
   S.pages.forEach((pg, i) => {
     const n = i + 1, t = document.createElement("div"), im = new Image(), lab = document.createElement("div"), cnt = S.elements.filter(e => e.page === n).length;
     t.className = "tile" + (pgSel.includes(n) ? " sel" : "") + (n === S.page ? " cur" : ""); t.draggable = true; t.tabIndex = 0; t.setAttribute("role", "option"); t.setAttribute("aria-selected", pgSel.includes(n));
-    im.alt = "Anteprima della pagina " + n; im.draggable = false; if (S.thumbs[pkey(pg)]) im.src = S.thumbs[pkey(pg)];
-    lab.className = "lab"; lab.textContent = "Pagina " + n + (pg.src ? " (" + S.sources[pg.src].name + ")" : ""); t.append(im, lab);
-    if (cnt) { const b = document.createElement("span"); b.className = "bd"; b.textContent = cnt + (cnt === 1 ? " elemento" : " elementi"); t.appendChild(b); }
+    im.alt = T("Anteprima della pagina ") + n; im.draggable = false; if (S.thumbs[pkey(pg)]) im.src = S.thumbs[pkey(pg)];
+    lab.className = "lab"; lab.dataset.cur = T(" (aperta)"); lab.textContent = T("Pagina ") + n + (pg.src ? " (" + S.sources[pg.src].name + ")" : ""); t.append(im, lab);
+    if (cnt) { const b = document.createElement("span"); b.className = "bd"; b.textContent = cnt + (cnt === 1 ? T(" elemento") : T(" elementi")); t.appendChild(b); }
     t.onclick = ev => {
       if (ev.shiftKey) { const a = Math.min(pgAnchor, n), z = Math.max(pgAnchor, n); pgSel = Array.from({ length: z - a + 1 }, (_, k) => a + k); }
       else if (ev.ctrlKey || ev.metaKey) { pgSel = pgSel.includes(n) ? pgSel.filter(x => x !== n) : [...pgSel, n].sort((x, y) => x - y); pgAnchor = n; }
@@ -1568,7 +1580,7 @@ function positionPanel(force) {   // la freccia del pannello punta all'icona del
 }
 window.addEventListener("resize", positionPanel);
 async function rotatePages(idxs) {   // ruota di 90° in senso orario le pagine indicate, insieme ai loro elementi
-  if (!S.pdf) return; if (!idxs.length) { toast("Seleziona prima le pagine da ruotare.", true); return; }
+  if (!S.pdf) return; if (!idxs.length) { toast(T("Seleziona prima le pagine da ruotare."), true); return; }
   if (S.editing) endEdit();
   const sizes = {}; for (const i of idxs) sizes[i] = await pageSize(i);   // dimensioni attuali, rotazione inclusa
   const pre = snap(), set = new Set(idxs);
@@ -1579,13 +1591,34 @@ async function rotatePages(idxs) {   // ruota di 90° in senso orario le pagine 
     e.x = Math.round(H - cy - e.w / 2); e.y = Math.round(cx - e.h / 2); e.rot = ((e.rot || 0) + 90) % 360;
   });
   S.sel = null; commit(pre); S.dirty = true;
-  render().catch(err => toast("Errore nel disegno della pagina: " + err.message, true)); refresh(); renderThumbs();
+  render().catch(err => toast(T("Errore nel disegno della pagina: ") + err.message, true)); refresh(); renderThumbs();
 }
 $("btnRot").onclick = () => rotatePages([S.page]);
 $("pgRot").onclick = () => rotatePages(pgSel);
 positionPanel();
 
 setTool("select");
+
+/* Lingua: italiano e inglese, con le due bandiere in alto */
+const statics = [];
+(function () {
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = w.nextNode());) { if (/^(SCRIPT|STYLE)$/.test(n.parentElement.tagName)) continue; const v = n.nodeValue.trim(); if (v && DICT[v] !== undefined) statics.push({ n, it: v }); }
+  document.querySelectorAll("[title],[aria-label],[placeholder]").forEach(el => ["title", "aria-label", "placeholder"].forEach(a => { const v = el.getAttribute(a); if (v && DICT[v] !== undefined) statics.push({ el, a, it: v }); }));
+})();
+$("langIt").innerHTML = '<svg viewBox="0 0 3 2"><rect width="1" height="2" fill="#009246"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ce2b37"/></svg>';
+$("langEn").innerHTML = '<svg viewBox="0 0 60 40"><rect width="60" height="40" fill="#012169"/><path d="M0 0 60 40M60 0 0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 60 40M60 0 0 40" stroke="#C8102E" stroke-width="3"/><path d="M30 0v40M0 20h60" stroke="#fff" stroke-width="12"/><path d="M30 0v40M0 20h60" stroke="#C8102E" stroke-width="7"/></svg>';
+function applyLang() {
+  document.documentElement.lang = LANG;
+  statics.forEach(x => { if (x.n) x.n.nodeValue = T(x.it); else x.el.setAttribute(x.a, T(x.it)); });
+  document.querySelectorAll(".tool").forEach(b => { b.dataset.tip = T(b.dataset.it); });
+  $("langIt").setAttribute("aria-pressed", LANG === "it"); $("langEn").setAttribute("aria-pressed", LANG === "en");
+  setTheme(document.documentElement.dataset.theme || "light");
+  refresh(); if (!$("dlg").hidden) renderThumbs();
+}
+function setLang(l) { LANG = l; try { localStorage.setItem("pdfstudio-lang", l); } catch (e) {} applyLang(); }
+$("langIt").onclick = () => setLang("it"); $("langEn").onclick = () => setLang("en");
+applyLang();
 </script>
 </body>
 </html>
